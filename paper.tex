@@ -1,0 +1,462 @@
+\documentclass[twoside]{article}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{mathtools}
+\usepackage{graphicx}
+\usepackage{rotating}
+\usepackage{xcolor}
+\usepackage[inline]{enumitem}
+
+%\usepackage{algorithm}
+%\usepackage[noend]{algpseudocode}
+%\usepackage{algorithmicx}
+%\usepackage{algorithm2e}
+
+%\usepackage[authordate,bibencoding=auto,strict,backend=biber,natbib]{biblatex-chicago}
+%\usepackage[round]{natbib}   % omit 'round' option if you prefer square brackets
+%\bibliographystyle{plainnat}
+
+\usepackage{tikz}
+\usepackage{pgfplots}
+\pgfplotsset{width=7cm,compat=1.8}
+\definecolor{darkgreen}{RGB}{0,127,0}
+
+\definecolor{wmle}{RGB}{0,0,0}
+\definecolor{wmlei}{RGB}{230,159,0}
+\definecolor{wave}{RGB}{86,180,233}
+\definecolor{wboot}{RGB}{204,121,167}
+\definecolor{wowa}{RGB}{0,158,115}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newtheorem{cor}{Corollary}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{assumption}{Condition}
+\newtheorem{defn}{Definition}
+
+\DeclareMathOperator*{\argmin}{arg\,min}
+\DeclareMathOperator*{\argmax}{arg\,max}
+\DeclareMathOperator*{\vecspan}{span}
+\DeclareMathOperator*{\affspan}{aff}
+\DeclareMathOperator*{\subG}{subG}
+\DeclareMathOperator*{\tr}{tr}
+
+%\newcommand{\smin}[1]{s_\text{min}({#1})}
+\newcommand{\smin}{s_\text{min}}
+\newcommand{\smax}{s_\text{max}}
+\newcommand{\qhi}{q_\text{hi}}
+\newcommand{\qlo}{q_\text{lo}}
+\newcommand{\zero}{\text{\textbf{0}}}
+\newcommand{\Zproj}{Z^{\textit{proj}}}
+\newcommand{\Zowa}{Z^{\textit{owa}}}
+\newcommand{\nowa}{n^{\textit{owa}}}
+\newcommand{\Q}{\mathcal{Q}}
+\newcommand{\Y}{\mathcal{Y}}
+\newcommand{\X}{\mathcal{X}}
+\newcommand{\matW}{\hat W}
+\newcommand{\matV}{\hat V}
+\newcommand{\W}{{\mathcal W}}
+\newcommand{\Wowa}{{\hat \W^{\textit{owa}}}}
+\newcommand{\Waff}{\mathcal{\hat A}}
+\newcommand{\WaffE}{{\mathcal{\hat A}_\E}}
+\newcommand{\Wave}{{\mathcal{\hat W}^{ave}}}
+\newcommand{\Wtave}{{\mathcal{W}^{ave,*}}}
+\newcommand{\V}{\mathcal{V}}
+\newcommand{\A}{\mathcal{A}}
+\newcommand{\D}{\mathcal{D}}
+\newcommand{\E}{\mathbb{E}}
+\newcommand{\x}{\mathbf{x}}
+\newcommand{\y}{\mathbf{y}}
+\newcommand{\w}{\mathbf w}
+\newcommand{\vv}{\mathbf{v}}
+\newcommand{\vfull}{\hat\vv^{\textit{owa,full}}}
+\newcommand{\vowa}{\hat\vv^{\textit{owa}}}
+\newcommand{\wkl}{\hat\w^{kl}}
+\newcommand{\astar}{\vv^*}
+\newcommand{\wowa}{\hat\w^{owa}}
+\newcommand{\wowafull}{\hat\w^{\textit{owa,full}}}
+\newcommand{\wowastar}{\hat\w^{\textit{owa,*}}}
+\newcommand{\wave}{\hat\w^{ave}}
+\newcommand{\wtave}{\E\hat\w^{ave}}
+\newcommand{\waver}{\hat\w^{ave,r}}
+\newcommand{\wboot}{\hat\w^{boot}}
+\newcommand{\wmle}{\hat\w^{erm}}
+\newcommand{\wmler}{\hat\w^{erm,r}}
+\newcommand{\wstar}{{\w^{*}}}
+\newcommand{\what}{{\hat\w}}
+\newcommand{\wq}{\hat\w^{q}}
+\newcommand{\wqstar}{\hat\w^{q^*}}
+\newcommand{\dist}{\mathcal{D}}
+\newcommand{\reg}{r}
+\newcommand{\loss}{\ell}
+\newcommand{\Loss}{\mathcal{L}}
+
+\newcommand{\tbias}{t_{\text{\textit{bias}}}}
+\newcommand{\tvar}{t_{\text{\textit{var}}}}
+
+\newcommand{\I}{\mathcal I}
+%\newcommand{\I^{-1}}{\I^{-1}}
+\newcommand{\law}{\ensuremath{\xrightarrow{L}}}
+\newcommand{\normal}[2]{\ensuremath{\mathcal{N}\left({{#1}},{{#2}}\right)}}
+\newcommand{\subnormal}[1]{\ensuremath{\subG\left({{#1}}\right)}}
+\newcommand{\trans}[1]{\ensuremath{{#1}^{\mathsf{T}}}}
+\newcommand{\pinv}[1]{\ensuremath{{#1}^{\mathsf{\dagger}}}}
+\newcommand{\ltwo}[1]{{\lVert {#1} \rVert}}
+\newcommand{\ltwobig}[1]{{\left\lVert {#1} \right\rVert}}
+\newcommand{\lone}[1]{{\lVert {#1} \rVert}_1}
+\newcommand{\lzero}[1]{{\lVert {#1} \rVert}_0}
+\newcommand{\proj}[1]{\pi_{{#1}}}
+\newcommand{\prob}[1]{\Pr\left[{#1}\right]}
+
+\DeclarePairedDelimiterX{\infdivx}[2]{(}{)}{%
+  #1\;\delimsize\|\;#2%
+}
+\newcommand{\kl}{\text{KL}\infdivx}
+
+%\newcommand{\plots}[1]{}
+\newcommand{\plots}[1]{#1}
+\newcommand{\ignore}[1]{}
+\newcommand{\fixme}[1]{\textbf{FIXME:} {#1}}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{filecontents}{paper.bib}
+
+@article{scikit-learn,
+ title={Scikit-learn: Machine Learning in {P}ython},
+ author={Pedregosa, F. and Varoquaux, G. and Gramfort, A. and Michel, V.
+         and Thirion, B. and Grisel, O. and Blondel, M. and Prettenhofer, P.
+         and Weiss, R. and Dubourg, V. and Vanderplas, J. and Passos, A. and
+         Cournapeau, D. and Brucher, M. and Perrot, M. and Duchesnay, E.},
+ journal={Journal of Machine Learning Research},
+ volume={12},
+ pages={2825--2830},
+ year={2011}
+}
+
+@article{kddcup2012,
+  author={Yanzhi Niu and Yi Wang and Gordon Sun and Aden Yue and Brian Dalessandro and Claudia Perlich and Ben Hamner},
+  title = {The Tencent Dataset and {KDD}-Cup'12},
+  howpublished = {URL \url{http://www.kddcup2012.org/c/kddcup2012-track2}},
+  year = {2012}
+}
+
+@book{lehmann1999elements,
+  title={Elements of large-sample theory},
+  author={Lehmann, Erich Leo},
+  year={1999},
+  publisher={Springer Science \& Business Media}
+}
+
+@inproceedings{merugu2003privacy,
+  title={Privacy-preserving distributed clustering using generative models},
+  author={Merugu, Srujana and Ghosh, Joydeep},
+  booktitle={Data Mining, 2003. ICDM 2003. Third IEEE International Conference on},
+  pages={211--218},
+  year={2003},
+  organization={IEEE}
+}
+
+@article{dasgupta2003elementary,
+  title={An elementary proof of a theorem of {J}ohnson and {L}indenstrauss},
+  author={Dasgupta, Sanjoy and Gupta, Anupam},
+  journal={Random Structures \& Algorithms},
+  volume={22},
+  number={1},
+  pages={60--65},
+  year={2003},
+  publisher={Wiley Online Library}
+}
+
+@article{matouvsek2008variants,
+  title={On variants of the {J}ohnson--{L}indenstrauss lemma},
+  author={Matou{\v{s}}ek, Ji{\v{r}}{\'\i}},
+  journal={Random Structures \& Algorithms},
+  volume={33},
+  number={2},
+  pages={142--156},
+  year={2008},
+  publisher={Wiley Online Library}
+}
+
+@inproceedings{negahban2009unified,
+  title={A unified framework for high-dimensional analysis of M-estimators with decomposable regularizers},
+  author={Negahban, Sahand and Yu, Bin and Wainwright, Martin J and Ravikumar, Pradeep K},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={1348--1356},
+  year={2009}
+}
+
+@inproceedings{mcdonald2009efficient,
+  title={Efficient large-scale distributed training of conditional maximum entropy models},
+  author={McDonald, Ryan and Mohri, Mehryar and Silberman, Nathan and Walker, Dan and Mann, Gideon S},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={1231--1239},
+  year={2009}
+}
+
+@inproceedings{zinkevich2010parallelized,
+  title={Parallelized stochastic gradient descent},
+  author={Zinkevich, Martin and Weimer, Markus and Li, Lihong and Smola, Alex J},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={2595--2603},
+  year={2010}
+}
+
+@incollection{vershynin2010introduction,
+  title={Introduction to the non-asymptotic analysis of random matrices},
+  author={Vershynin, Roman},
+  chapter=5,
+  booktitle={Compressed Sensing, Theory and Applications},
+  editor={Y. Eldar and G. Kutyniok},
+  year={2012}
+}
+
+@article{boyd2011distributed,
+  title={Distributed optimization and statistical learning via the alternating direction method of multipliers},
+  author={Boyd, Stephen and Parikh, Neal and Chu, Eric and Peleato, Borja and Eckstein, Jonathan},
+  journal={Foundations and Trends{\textregistered} in Machine Learning},
+  volume={3},
+  number={1},
+  pages={1--122},
+  year={2011},
+  publisher={Now Publishers Inc.}
+}
+
+
+@article{spokoiny2012parametricestimation,
+  title={Parametric estimation. Finite sample theory},
+  author={Spokoiny, Vladimir},
+  journal={The Annals of Statistics},
+  volume={40},
+  number={6},
+  pages={2877--2909},
+  year={2012},
+  publisher={Institute of Mathematical Statistics}
+}
+
+@inproceedings{zhang2012communication,
+  title={Communication-efficient algorithms for statistical optimization},
+  author={Zhang, Yuchen and Wainwright, Martin J and Duchi, John C},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={1502--1510},
+  year={2012}
+}
+
+@article{liu2012distributed,
+  title={Distributed parameter estimation via pseudo-likelihood},
+  author={Liu, Qiang and Ihler, Alexander},
+  journal={arXiv preprint arXiv:1206.6420},
+  year={2012}
+}
+
+@article{hsu2012tail,
+  title={A tail inequality for quadratic forms of subgaussian random vectors},
+  author={Hsu, Daniel and Kakade, Sham M and Zhang, Tong and others},
+  journal={Electron. Commun. Probab},
+  volume={17},
+  number={52},
+  pages={1--6},
+  year={2012}
+}
+
+@inproceedings{zhang2013information,
+  title={Information-theoretic lower bounds for distributed statistical estimation with communication constraints},
+  author={Zhang, Yuchen and Duchi, John and Jordan, Michael I and Wainwright, Martin J},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={2328--2336},
+  year={2013}
+}
+
+@inproceedings{zhang2013divide,
+  title={Divide and Conquer Kernel Ridge Regression.},
+  author={Zhang, Yuchen and Duchi, John C and Wainwright, Martin J},
+  booktitle={COLT},
+  year={2013}
+}
+
+@inproceedings{li2014scaling,
+  title={Scaling Distributed Machine Learning with the Parameter Server.},
+  author={Li, Mu and Andersen, David G and Park, Jun Woo},
+  journal={OSDI},
+  year=2014
+}
+
+@article{vw,
+  author={Langford, John},
+  title={Vowpal Wabbit open source project}
+}
+
+@article{agarwal2014reliable,
+  title={A reliable effective terascale linear learning system.},
+  author={Agarwal, Alekh and Chapelle, Olivier and Langford, John},
+  journal={Journal of Machine Learning Research},
+  volume={15},
+  number={1},
+  pages={1111--1133},
+  year={2014}
+}
+
+@inproceedings{liu2014distributed,
+  title={Distributed estimation, information loss and exponential families},
+  author={Liu, Qiang and Ihler, Alexander T},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={1098--1106},
+  year={2014}
+}
+
+@inproceedings{shamir2014fundamental,
+  title = {Fundamental Limits of Online and Distributed Algorithms for Statistical Learning and Estimation},
+  author = {Shamir, Ohad},
+  booktitle = {Advances in Neural Information Processing Systems 27},
+  pages = {163--171},
+  year = {2014}
+}
+
+@article{duchi2014optimality,
+  title={Optimality guarantees for distributed statistical estimation},
+  author={Duchi, John C and Jordan, Michael I and Wainwright, Martin J and Zhang, Yuchen},
+  journal={arXiv preprint arXiv:1405.0782},
+  year={2014}
+}
+
+@inproceedings{garg2014communication,
+  title={On communication cost of distributed statistical estimation and dimensionality},
+  author={Garg, Ankit and Ma, Tengyu and Nguyen, Huy},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={2726--2734},
+  year={2014}
+}
+
+@book{shalev2014understanding,
+  title={Understanding machine learning: From theory to algorithms},
+  author={Shalev-Shwartz, Shai and Ben-David, Shai},
+  year={2014},
+  publisher={Cambridge University Press}
+}
+
+@article{braverman2015communication,
+  title={Communication lower bounds for statistical estimation problems via a distributed data processing inequality},
+  author={Braverman, Mark and Garg, Ankit and Ma, Tengyu and Nguyen, Huy L and Woodruff, David P},
+  journal={Symposium on the Theory of Computing},
+  year={2016}
+}
+
+@inproceedings{sivakumar2015beyond,
+  title={Beyond Sub-Gaussian Measurements: High-Dimensional Structured Estimation with Sub-Exponential Designs},
+  author={Sivakumar, Vidyashankar and Banerjee, Arindam and Ravikumar, Pradeep K},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={2206--2214},
+  year={2015}
+}
+
+@article{lee2015communication,
+  title={Communication-efficient sparse regression: a one-shot approach},
+  author={Lee, Jason D and Sun, Yuekai and Liu, Qiang and Taylor, Jonathan E},
+  journal={arXiv preprint arXiv:1503.04337},
+  year={2015}
+}
+
+@article{battey2015distributed,
+  title={Distributed estimation and inference with statistical guarantees},
+  author={Battey, Heather and Fan, Jianqing and Liu, Han and Lu, Junwei and Zhu, Ziwei},
+  journal={arXiv preprint arXiv:1509.05457},
+  year={2015}
+}
+
+@article{han2016bootstrap,
+  title={Bootstrap Model Aggregation for Distributed Statistical Learning},
+  author={Han, Jun and Liu, Qiang},
+  journal={Advances in Neural Information Processing Systems},
+  year={2016}
+}
+
+@article{rosenblatt2016optimality,
+  title={On the optimality of averaging in distributed statistical learning},
+  author={Rosenblatt, Jonathan D and Nadler, Boaz},
+  journal={Information and Inference},
+  volume={5},
+  number={4},
+  pages={379--404},
+  year={2016},
+  publisher={Oxford University Press}
+}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+@article{goodfellow2014qualitatively,
+  title={Qualitatively characterizing neural network optimization problems},
+  author={Goodfellow, Ian J and Vinyals, Oriol and Saxe, Andrew M},
+  journal={ICLR},
+  year={2015}
+}
+
+@article{mcmahan2016federated,
+  author    = {H. Brendan McMahan and
+               Eider Moore and
+               Daniel Ramage and
+               Blaise Ag{\"{u}}era y Arcas},
+  title     = {Federated Learning of Deep Networks using Model Averaging},
+  journal   = {CoRR},
+  volume    = {abs/1602.05629},
+  year      = {2016},
+  url       = {http://arxiv.org/abs/1602.05629},
+  timestamp = {Tue, 01 Mar 2016 17:47:25 +0100},
+  biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/McMahanMRA16},
+  bibsource = {dblp computer science bibliography, http://dblp.org}
+}
+
+@inproceedings{shokri2015privacy,
+  title={Privacy-preserving deep learning},
+  author={Shokri, Reza and Shmatikov, Vitaly},
+  booktitle={Proceedings of the 22nd ACM SIGSAC conference on computer and communications security},
+  pages={1310--1321},
+  year={2015},
+  organization={ACM}
+}
+
+@inproceedings{abadi2016deep,
+  title={Deep learning with differential privacy},
+  author={Abadi, Mart{\'\i}n and Chu, Andy and Goodfellow, Ian and McMahan, H Brendan and Mironov, Ilya and Talwar, Kunal and Zhang, Li},
+  booktitle={Proceedings of the 2016 ACM SIGSAC Conference on Computer and Communications Security},
+  pages={308--318},
+  year={2016},
+  organization={ACM}
+}
+\end{filecontents}
+\immediate\write18{bibtex paper}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
+\begin{document}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\begin{abstract}
+\end{abstract}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+Google used a highly decentralized training procedure to train models on phones and have a central server average the model parameters.
+Their procedure uses many rounds of communication, but they show experiments on MNIST with a single round.
+\cite{mcmahan2016federated}
+
+\cite{goodfellow2014qualitatively} shows with experiments that neural networks rarely get stuck in local optima.
+
+\cite{shokri2015privacy,abadi2016deep} study differential privacy in machine learning.
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\clearpage
+\bibliographystyle{plainnat}
+\bibliography{paper}
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\end{document}

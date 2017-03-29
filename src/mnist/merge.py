@@ -32,7 +32,7 @@ def main(_):
         # create the graph
         images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
         labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
-        logits = model.inference(images_placeholder,FLAGS.hidden1,FLAGS.hidden2)
+        logits = model.inference(images_placeholder)
         loss = model.loss(logits, labels_placeholder)
         train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, labels_placeholder)
@@ -41,28 +41,34 @@ def main(_):
         tensorlists=defaultdict(list)
         saver = tf.train.Saver()
         sess_local = dict()
-        for procid in range(FLAGS.numproc):
+        print('loading models')
+        #for procid in range(FLAGS.numproc):
+        for procid in range(16):
             sess_local[procid]=tf.Session()
 
             modeldir=os.path.join(
                 FLAGS.log_dir,
-                '%s-%d-%d.%d'%(FLAGS.model,FLAGS.numproc,procid,FLAGS.seed)
+                '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
                 )
-            print('loading model %s.'%modeldir,end='')
-            sys.stdout.flush()
+            print('  %s'%modeldir)
             saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-1999'))
-            print(' done.')
 
         # create averaged model
+        print('creating average model')
         sess_ave = tf.Session()
         for v in tf.trainable_variables():
-            print('%s:'%v.name)
+            print('  %s:'%v.name)
             t=np.stack([tf.convert_to_tensor(v).eval(session=sess_local[i]) for i in sess_local.keys()],axis=0).mean(axis=0)
             sess_ave.run(tf.assign(v,t))
 
         print('Average Test Eval:')
         do_eval(sess_ave,eval_correct,images_placeholder,labels_placeholder,data_sets.test,FLAGS)
 
+        # create nowa model
+        #print('creating nowa model')
+        #graph_nowa = tf.Graph()
+
+        for v in tf.trainable_variables():
 
 
     print('done.')
@@ -82,18 +88,6 @@ if __name__ == '__main__':
             type=int,
             default=2000,
             help='Number of steps to run trainer.'
-    )
-    parser.add_argument(
-            '--hidden1',
-            type=int,
-            default=128,
-            help='Number of units in hidden layer 1.'
-    )
-    parser.add_argument(
-            '--hidden2',
-            type=int,
-            default=32,
-            help='Number of units in hidden layer 2.'
     )
     parser.add_argument(
             '--batch_size',
@@ -133,6 +127,11 @@ if __name__ == '__main__':
             '--model',
             type=str,
             default=''
+            )
+    parser.add_argument(
+            '--same_seed',
+            default=False,
+            action='store_true'
             )
 
     FLAGS, unparsed = parser.parse_known_args()

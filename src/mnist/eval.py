@@ -24,6 +24,7 @@ def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_set,FLA
         feed_dict = {
                 images_placeholder: images_feed,
                 labels_placeholder: labels_feed,
+                dropout_rate: 1,
         }
         true_count += sess.run(eval_correct, feed_dict=feed_dict)
     if num_examples>0:

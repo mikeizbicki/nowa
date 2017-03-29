@@ -18,6 +18,7 @@ import numpy as np
 
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 from eval import do_eval
+from models.common import *
 
 # Basic model parameters as external flags.
 FLAGS = None
@@ -31,7 +32,7 @@ def main(_):
     model = importlib.import_module("models.%s" % FLAGS.model)
 
     # prepare logging
-    local_log_dir=os.path.join(FLAGS.log_dir, '%s-%d-%d.%d'%(FLAGS.model,FLAGS.numproc,FLAGS.procid,FLAGS.seed))
+    local_log_dir=os.path.join(FLAGS.log_dir, '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
     if tf.gfile.Exists(local_log_dir):
         tf.gfile.DeleteRecursively(local_log_dir)
     tf.gfile.MakeDirs(local_log_dir)
@@ -65,14 +66,18 @@ def main(_):
     # Tell TensorFlow that the model will be built into the default Graph.
     with tf.Graph().as_default():
         # Ensure that tf will be deterministic
-        tf.set_random_seed(FLAGS.seed)
+        seed=FLAGS.seed
+        if not FLAGS.same_seed:
+            seed+=FLAGS.procid
+        tf.set_random_seed(seed)
 
         # Generate placeholders for the images and labels.
         images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
         labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
+        dropout_rate = tf.placeholder(tf.float32)
 
         # Build a Graph that computes predictions from the inference model.
-        logits = model.inference(images_placeholder,FLAGS.hidden1,FLAGS.hidden2)
+        logits = model.inference(images_placeholder,dropout_rate)
 
         # Add to the Graph the Ops for loss calculation.
         loss = model.loss(logits, labels_placeholder)
@@ -116,6 +121,7 @@ def main(_):
             feed_dict = {
                     images_placeholder: images_feed,
                     labels_placeholder: labels_feed,
+                    dropout_rate: 0.4,
             }
 
             # Run one step of the model.  The return values are the activations
@@ -155,7 +161,7 @@ if __name__ == '__main__':
     parser.add_argument(
             '--learning_rate',
             type=float,
-            default=0.01,
+            default=0.0001,
             help='Initial learning rate.'
     )
     parser.add_argument(
@@ -163,18 +169,6 @@ if __name__ == '__main__':
             type=int,
             default=2000,
             help='Number of steps to run trainer.'
-    )
-    parser.add_argument(
-            '--hidden1',
-            type=int,
-            default=128,
-            help='Number of units in hidden layer 1.'
-    )
-    parser.add_argument(
-            '--hidden2',
-            type=int,
-            default=32,
-            help='Number of units in hidden layer 2.'
     )
     parser.add_argument(
             '--batch_size',
@@ -219,6 +213,11 @@ if __name__ == '__main__':
             '--model',
             type=str,
             default=''
+            )
+    parser.add_argument(
+            '--same_seed',
+            default=False,
+            action='store_true'
             )
 
     FLAGS, unparsed = parser.parse_known_args()

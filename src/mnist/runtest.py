@@ -23,7 +23,7 @@ from eval import do_eval
 FLAGS = None
 
 def main(_):
-    
+
     # process command line args
     if FLAGS.numproc <= FLAGS.procid or FLAGS.procid < 0:
         print("procid/numproc combination invalid", file=sys.stderr)
@@ -93,7 +93,10 @@ def main(_):
         saver = tf.train.Saver()
 
         # Create a session for running Ops on the Graph.
-        sess = tf.Session()
+        session_conf = tf.ConfigProto(
+            intra_op_parallelism_threads=1,
+            inter_op_parallelism_threads=1)
+        sess = tf.Session(config=session_conf)
 
         # Instantiate a SummaryWriter to output summaries and the Graph.
         summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)

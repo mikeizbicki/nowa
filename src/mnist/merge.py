@@ -6,6 +6,8 @@ import argparse
 from collections import defaultdict
 import importlib
 import os.path
+import os
+import re
 import sys
 
 import tensorflow as tf
@@ -28,31 +30,37 @@ def main(_):
 
         # Ensure that tf will be deterministic
         tf.set_random_seed(FLAGS.seed)
-        
+
         # create the graph
         images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
         labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
         dropout_rate = tf.placeholder(tf.float32)
-        logits = model.inference(images_placeholder)
+        logits = model.inference(images_placeholder,dropout_rate)
         loss = model.loss(logits, labels_placeholder)
         train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, labels_placeholder)
 
-        # load local models 
+        # load local models
         tensorlists=defaultdict(list)
         saver = tf.train.Saver()
         sess_local = dict()
         print('loading models')
-        #for procid in range(FLAGS.numproc):
-        for procid in range(16):
+        for procid in range(FLAGS.maxproc):
             sess_local[procid]=tf.Session()
 
             modeldir=os.path.join(
                 FLAGS.log_dir,
-                '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
+                '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,procid)
                 )
-            print('  %s'%modeldir)
-            saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-1999'))
+            maxitr=max(map(int,sum(
+                    map(
+                        lambda x:re.findall('\d+',x),
+                        sum(map(lambda x:re.findall(r'model.ckpt.\d+',x), os.listdir(modeldir)),[])
+                        ),
+                    [],
+                    )))
+            print('  %s --- %d'%(modeldir,maxitr))
+            saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-%d'%maxitr))
 
         # create averaged model
         print('creating average model')
@@ -69,7 +77,7 @@ def main(_):
         #print('creating nowa model')
         #graph_nowa = tf.Graph()
 
-        for v in tf.trainable_variables():
+        #for v in tf.trainable_variables():
 
 
     print('done.')
@@ -116,6 +124,11 @@ if __name__ == '__main__':
     )
     parser.add_argument(
             '--numproc',
+            type=int,
+            default=1
+            )
+    parser.add_argument(
+            '--maxproc',
             type=int,
             default=1
             )

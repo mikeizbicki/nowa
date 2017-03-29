@@ -4,7 +4,7 @@ import sys
 
 import tensorflow as tf
 
-def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_set,FLAGS):
+def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,dropout_rate,data_set,FLAGS):
     """Runs one evaluation against the full epoch of data.
 
     Args:

@@ -148,13 +148,13 @@ def main(_):
                 saver.save(sess, checkpoint_file, global_step=step)
 
                 print('Training Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.train,FLAGS)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,dropout_rate,data_sets.train,FLAGS)
 
                 print('Validation Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.validation,FLAGS)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,dropout_rate,data_sets.validation,FLAGS)
 
                 print('Test Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.test,FLAGS)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,dropout_rate,data_sets.test,FLAGS)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

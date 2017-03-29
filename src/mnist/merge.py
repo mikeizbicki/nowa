@@ -32,6 +32,7 @@ def main(_):
         # create the graph
         images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
         labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
+        dropout_rate = tf.placeholder(tf.float32)
         logits = model.inference(images_placeholder)
         loss = model.loss(logits, labels_placeholder)
         train_op = model.training(loss, FLAGS.learning_rate)
@@ -62,7 +63,7 @@ def main(_):
             sess_ave.run(tf.assign(v,t))
 
         print('Average Test Eval:')
-        do_eval(sess_ave,eval_correct,images_placeholder,labels_placeholder,data_sets.test,FLAGS)
+        do_eval(sess_ave,eval_correct,images_placeholder,labels_placeholder,dropout_rate,data_sets.test,FLAGS)
 
         # create nowa model
         #print('creating nowa model')

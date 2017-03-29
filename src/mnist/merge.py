@@ -1,13 +1,19 @@
 #!/usr/bin/python
 
+from __future__ import print_function
+
 import argparse
+from collections import defaultdict
 import importlib
+import os.path
 import sys
 
 import tensorflow as tf
 import numpy as np
 
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
+
+from eval import do_eval
 
 ################################################################################
 
@@ -31,19 +37,31 @@ def main(_):
         train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, labels_placeholder)
 
-
+        # load local models 
+        tensorlists=defaultdict(list)
         saver = tf.train.Saver()
-        sess = tf.Session()
-        saver.restore(sess, "log/mnist-256-15.0/model-256-15.ckpt")
+        sess_local = dict()
+        for procid in range(FLAGS.numproc):
+            sess_local[procid]=tf.Session()
 
-        print('Training Data Eval:')
-        do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.train)
+            modeldir=os.path.join(
+                FLAGS.log_dir,
+                '%s-%d-%d.%d'%(FLAGS.model,FLAGS.numproc,procid,FLAGS.seed)
+                )
+            print('loading model %s.'%modeldir,end='')
+            sys.stdout.flush()
+            saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-1999'))
+            print(' done.')
 
-        print('Validation Data Eval:')
-        do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.validation)
+        # create averaged model
+        sess_ave = tf.Session()
+        for v in tf.trainable_variables():
+            print('%s:'%v.name)
+            t=np.stack([tf.convert_to_tensor(v).eval(session=sess_local[i]) for i in sess_local.keys()],axis=0).mean(axis=0)
+            sess_ave.run(tf.assign(v,t))
 
-        print('Test Data Eval:')
-        do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.test)
+        print('Average Test Eval:')
+        do_eval(sess_ave,eval_correct,images_placeholder,labels_placeholder,data_sets.test,FLAGS)
 
 
 

@@ -17,37 +17,10 @@ import tensorflow as tf
 import numpy as np
 
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
+from eval import do_eval
 
 # Basic model parameters as external flags.
 FLAGS = None
-
-def do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_set):
-    """Runs one evaluation against the full epoch of data.
-
-    Args:
-        sess: The session in which the model has been trained.
-        eval_correct: The Tensor that returns the number of correct predictions.
-        images_placeholder: The images placeholder.
-        labels_placeholder: The labels placeholder.
-        data_set: The set of images and labels to evaluate, from
-            input_data.read_data_sets().
-    """
-    # And run one epoch of eval.
-    true_count = 0  # Counts the number of correct predictions.
-    steps_per_epoch = data_set.num_examples // FLAGS.batch_size
-    num_examples = steps_per_epoch * FLAGS.batch_size
-    for step in xrange(steps_per_epoch):
-        images_feed, labels_feed = data_set.next_batch(FLAGS.batch_size,FLAGS.fake_data)
-        feed_dict = {
-                images_placeholder: images_feed,
-                labels_placeholder: labels_feed,
-        }
-        true_count += sess.run(eval_correct, feed_dict=feed_dict)
-    if num_examples>0:
-        precision = float(true_count) / num_examples
-        print('  Num examples: %d  Num correct: %d  Precision @ 1: %0.04f' %
-              (num_examples, true_count, precision))
-
 
 def main(_):
     
@@ -162,17 +135,17 @@ def main(_):
 
             # Save a checkpoint and evaluate the model periodically.
             if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
-                checkpoint_file = os.path.join(local_log_dir, 'model.ckpt'%(FLAGS.numproc,FLAGS.procid))
+                checkpoint_file = os.path.join(local_log_dir, 'model.ckpt')
                 saver.save(sess, checkpoint_file, global_step=step)
 
                 print('Training Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.train)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.train,FLAGS)
 
                 print('Validation Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.validation)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.validation,FLAGS)
 
                 print('Test Data Eval:')
-                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.test)
+                do_eval(sess,eval_correct,images_placeholder,labels_placeholder,data_sets.test,FLAGS)
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()

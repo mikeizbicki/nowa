@@ -185,7 +185,7 @@ if __name__ == '__main__':
     parser.add_argument(
             '--log_dir',
             type=str,
-            default='log',
+            default='log/local',
             help='Directory to put the log data.'
     )
     parser.add_argument(

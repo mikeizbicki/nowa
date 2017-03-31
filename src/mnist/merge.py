@@ -61,8 +61,6 @@ def main(_):
         saver = tf.train.Saver()
         sess_local = dict()
         for procid in range(FLAGS.maxproc):
-            sess_local[procid]=tf.Session()
-
             modeldir=os.path.join(
                 FLAGS.log_dir_in,
                 '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,procid)
@@ -75,6 +73,7 @@ def main(_):
                     [],
                     )))
             print('  %s --- %d'%(modeldir,maxitr))
+            sess_local[procid]=tf.Session()
             saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-%d'%maxitr))
 
     results['local'] = do_eval(sess_local[0],eval_correct,data_sets.test,FLAGS)
@@ -125,7 +124,11 @@ def main(_):
                     False,
                     name='nowa/'+vname
                     )
-                tf.identity(tf.tensordot(alpha_W,v2,1)+alpha_bias,name=vname)
+                tf.add(
+                    tf.tensordot(alpha_W,v2,1),
+                    tf.ones(v.get_shape())*alpha_bias,
+                    name=vname
+                    )
                     
             nowa_images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
             nowa_labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
@@ -247,4 +250,5 @@ if __name__ == '__main__':
             )
 
     FLAGS, unparsed = parser.parse_known_args()
+    FLAGS.procid=FLAGS.maxproc
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

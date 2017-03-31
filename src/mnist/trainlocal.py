@@ -33,12 +33,6 @@ def main(_):
         sys.exit(1)
     model = importlib.import_module("models.%s" % FLAGS.model)
 
-    # prepare logging
-    local_log_dir=os.path.join(FLAGS.log_dir_out, '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
-    if tf.gfile.Exists(local_log_dir):
-        tf.gfile.DeleteRecursively(local_log_dir)
-    tf.gfile.MakeDirs(local_log_dir)
-
     # load and sample data
     data_sets = read_data_sets(FLAGS.input_data_dir, FLAGS.fake_data)
 

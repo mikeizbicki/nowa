@@ -40,15 +40,23 @@ def do_eval(sess,eval_correct,data_set,FLAGS):
 ################################################################################
 
 def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
+    # ensure reproducibility
     tf.set_random_seed(0)
     #tf.reset_default_graph()
 
-    local_log_dir=FLAGS.log_dir_out
+    # prepare logging
+    local_log_dir=os.path.join(FLAGS.log_dir_out, '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
+    if tf.gfile.Exists(local_log_dir):
+        tf.gfile.DeleteRecursively(local_log_dir)
+    tf.gfile.MakeDirs(local_log_dir)
+    
+    # create session
     summary = tf.summary.merge_all()
     saver = tf.train.Saver()
     summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
     sess.run(tf.global_variables_initializer())
 
+    # training loop
     for step in xrange(FLAGS.max_steps):
         start_time = time.time()
 

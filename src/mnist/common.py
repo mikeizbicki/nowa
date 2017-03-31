@@ -39,7 +39,7 @@ def do_eval(sess,eval_correct,data_set,FLAGS):
 
 ################################################################################
 
-def trainmodel(FLAGS,sess,train_set,test_set,loss,train_op,metric):
+def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
     tf.set_random_seed(0)
     #tf.reset_default_graph()
 

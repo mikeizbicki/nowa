@@ -92,7 +92,7 @@ def main(_):
         sess = tf.Session(config=session_conf)
 
         # train model
-        trainmodel(FLAGS,sess,data_sets.train,data_sets.test,loss,train_op,eval_correct)
+        trainmodel(FLAGS,sess,data_sets.train,data_sets.test,train_op,eval_correct)
 
 ################################################################################
 

@@ -39,15 +39,15 @@ def do_eval(sess,eval_correct,data_set,FLAGS):
 
 ################################################################################
 
-def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
+def trainmodel(FLAGS,sess,train_set,test_set,loss,train_op,metric):
     tf.set_random_seed(0)
     #tf.reset_default_graph()
-    sess.run(tf.global_variables_initializer())
 
     local_log_dir=FLAGS.log_dir_out
-    saver = tf.train.Saver()
     summary = tf.summary.merge_all()
+    saver = tf.train.Saver()
     summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
+    sess.run(tf.global_variables_initializer())
 
     for step in xrange(FLAGS.max_steps):
         start_time = time.time()
@@ -58,7 +58,7 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
         feed_dict = {
                 'Placeholder:0': images_feed,
                 'Placeholder_1:0': labels_feed,
-                'Placeholder_2:0': 0.5,
+                'Placeholder_2:0': 0.4,
         }
 
         # Run one step of the model.  The return values are the activations
@@ -83,4 +83,4 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
             saver.save(sess, checkpoint_file, global_step=step)
 
             #print('Test Data Eval:')
-            #do_eval(sess,metric,test_set,FLAGS)
+            do_eval(sess,metric,test_set,FLAGS)

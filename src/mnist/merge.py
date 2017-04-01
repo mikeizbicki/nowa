@@ -1,9 +1,10 @@
-#!/usr/bin/python
+#!/usr/bin/python -u
 
 from __future__ import print_function
 
 import argparse
 from collections import defaultdict
+import errno
 import importlib
 import os.path
 import os
@@ -37,10 +38,10 @@ def main(_):
     data_sets.validation._labels=data_sets.train._labels[0:validn]
     data_sets.validation._num_examples=validn
 
-    ######################################## 
+    ########################################
     print('creating local model graph')
     graph_local = tf.Graph()
-    with graph_local.as_default(): 
+    with graph_local.as_default():
 
         # Ensure that tf will be deterministic
         tf.set_random_seed(FLAGS.seed)
@@ -54,13 +55,15 @@ def main(_):
         train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, labels_placeholder)
 
-    ######################################## 
+        count_params()
+
+    ########################################
     print('loading local models')
-    with graph_local.as_default(): 
+    with graph_local.as_default():
         tensorlists=defaultdict(list)
         saver = tf.train.Saver()
         sess_local = dict()
-        for procid in range(FLAGS.maxproc):
+        for procid in range(0,FLAGS.maxproc):
             modeldir=os.path.join(
                 FLAGS.log_dir_in,
                 '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,procid)
@@ -76,101 +79,195 @@ def main(_):
             sess_local[procid]=tf.Session()
             saver.restore(sess_local[procid], os.path.join(modeldir,'model.ckpt-%d'%maxitr))
 
-    results['local'] = do_eval(sess_local[0],eval_correct,data_sets.test,FLAGS)
-
-    ######################################## 
-    print('creating average model')
+    ########################################
+    print('creating augtensors')
     augtensors=dict()
-    with graph_local.as_default(): 
-        sess_ave = tf.Session()
+    with graph_local.as_default():
         for v in tf.trainable_variables():
             print('  %s:'%v.name)
             augtensors[v.name]=np.stack([tf.convert_to_tensor(v).eval(session=sess_local[i]) for i in sess_local.keys()],axis=0)
-            sess_ave.run(tf.assign(v,augtensors[v.name].mean(axis=0)))
 
-        results['ave']=do_eval(sess_ave,eval_correct,data_sets.test,FLAGS)
+    ########################################
+    print('closing local sessions')
+    for i in sess_local.keys():
+        sess_local[i].close()
 
-    ######################################## 
+    ########################################
+    if FLAGS.ave:
+        print('creating average model')
+        with graph_local.as_default():
+            sess_ave = tf.Session()
+            for v in tf.trainable_variables():
+                sess_ave.run(tf.assign(v,augtensors[v.name].mean(axis=0)))
+            results['ave']=do_eval(sess_ave,eval_correct,data_sets.test,FLAGS)
 
-    def mk_nowa_graph(deep):
-        graph_nowa = tf.Graph()
-        with graph_nowa.as_default():
-            alpha_W=None
-            alpha_bias=None
-            if not deep:
-                alpha_W=tf.Variable(
-                    tf.ones([FLAGS.maxproc])/FLAGS.maxproc,
-                    name='alpha_W'
-                    )
-                alpha_bias=tf.Variable(
-                    tf.zeros([1]),
-                    name='alpha_bias'
-                    )
+    ########################################
+    print('creating virtual procs')
+    with graph_local.as_default():
+        for v in tf.trainable_variables():
+            print('  %s:'%v.name)
+            x=np.random.standard_normal([FLAGS.virtual_procs]+v.get_shape().as_list()).astype(np.float32)
+            augtensors[v.name]=np.append(augtensors[v.name],x,axis=0)
+    totproc=FLAGS.maxproc+FLAGS.virtual_procs
 
+    ########################################
+    def mk_ops_and_train():
+        nowa_images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
+        nowa_labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
+        nowa_dropout_rate = tf.placeholder(tf.float32)
+#
+        nowa_logits=tf.contrib.copy_graph.copy_op_to_graph(logits,tf.get_default_graph(),vars)
+        #nowa_logits = model.inference(nowa_images_placeholder,nowa_dropout_rate)
+        nowa_loss = model.loss(nowa_logits, nowa_labels_placeholder)
+        nowa_train_op = model.training(nowa_loss, FLAGS.learning_rate)
+        nowa_eval_correct = model.evaluation(nowa_logits, nowa_labels_placeholder)
+
+        sess = tf.Session()
+        trainmodel(FLAGS,sess,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct)
+        return do_eval(sess,nowa_eval_correct,data_sets.test,FLAGS)
+
+    ####################
+    if FLAGS.owa:
+        print('creating owa model')
+        with tf.Graph().as_default():
+            alpha_W=tf.Variable(
+                tf.ones([totproc])/totproc,
+                name='alpha_W'
+                )
+            alpha_bias=tf.Variable(
+                tf.zeros([1]),
+                name='alpha_bias'
+                )
             vars = graph_local.get_collection('trainable_variables')
             for v in vars:
                 vname=v.name[:v.name.index(':')]
-                if deep:
-                    alpha_W=tf.Variable(
-                        tf.ones([FLAGS.maxproc])/FLAGS.maxproc,
-                        name='alpha_W/'+vname
-                        )
-                    alpha_bias=tf.Variable(
-                        tf.zeros([1]),
-                        name='alpha_bias/'+vname
-                        )
                 v2=tf.Variable(
                     augtensors[v.name],
                     False,
-                    name='nowa/'+vname
+                    name='owa/'+vname
                     )
                 tf.add(
                     tf.tensordot(alpha_W,v2,1),
                     tf.ones(v.get_shape())*alpha_bias,
                     name=vname
                     )
-                    
-            nowa_images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
-            nowa_labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
-            nowa_dropout_rate = tf.placeholder(tf.float32)
-#
-            nowa_logits=tf.contrib.copy_graph.copy_op_to_graph(logits,graph_nowa,vars)
-            #nowa_logits = model.inference(nowa_images_placeholder,nowa_dropout_rate)
-            nowa_loss = model.loss(nowa_logits, nowa_labels_placeholder)
-            nowa_train_op = model.training(nowa_loss, FLAGS.learning_rate)
-            nowa_eval_correct = model.evaluation(nowa_logits, nowa_labels_placeholder)
+            count_params()
+            results['owa']=mk_ops_and_train()
 
-            sess_nowa = tf.Session()
-            trainmodel(FLAGS,sess_nowa,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct)
-            if not deep:
-                results['nowa']=do_eval(sess_nowa,nowa_eval_correct,data_sets.test,FLAGS)
-            else:
-                results['dnowa']=do_eval(sess_nowa,nowa_eval_correct,data_sets.test,FLAGS)
-        
-        return graph_nowa
+    ####################
+    if FLAGS.dowa:
+        print('creating dowa model')
+        with tf.Graph().as_default():
+            vars = graph_local.get_collection('trainable_variables')
+            for v in vars:
+                vname=v.name[:v.name.index(':')]
+                alpha_W=tf.Variable(
+                    tf.ones([totproc])/totproc,
+                    name=vname+'/alpha_weights'
+                    )
+                alpha_bias=tf.Variable(
+                    tf.zeros([1]),
+                    name=vname+'/alpha_bias'
+                    )
+                v2=tf.Variable(
+                    augtensors[v.name],
+                    False,
+                    name=vname+'/augtensor'
+                    )
+                tf.add(
+                    tf.tensordot(alpha_W,v2,1),
+                    tf.ones(v.get_shape())*alpha_bias,
+                    name=vname
+                    )
+            count_params()
+            results['dnowa']=mk_ops_and_train()
 
-    print('creating nowa model')
-    mk_nowa_graph(False)
+    ####################
+    if FLAGS.anowa:
+        print('creating anowa model')
+        with tf.Graph().as_default():
+            vars = graph_local.get_collection('trainable_variables')
+            for v in vars:
+                vname=v.name[:v.name.index(':')]
 
-    print('creating dnowa model')
-    mk_nowa_graph(True)
+                hidden_units=1
+                alpha1_weights=tf.Variable(
+                    tf.add(
+                        tf.ones([hidden_units,totproc])/totproc,
+                        tf.truncated_normal([hidden_units,totproc],stddev=0.1)
+                        ),
+                    name=vname+'/alpha1/weights'
+                    )
+                alpha1_bias=tf.Variable(
+                    tf.zeros([hidden_units]),
+                    name=vname+'/alpha1/bias'
+                    )
+                v2=tf.Variable(
+                    augtensors[v.name],
+                    False,
+                    name=vname+'/augtensor'
+                    )
+                hidden1=tf.nn.relu(tf.add(
+                    tf.tensordot(alpha1_weights,v2,[[1],[0]]),
+                    tf.tensordot(
+                        tf.expand_dims(alpha1_bias,0),
+                        tf.expand_dims(tf.ones(v.get_shape()),0),
+                        [[0],[0]]
+                        ),
+                    name=vname+'/hidden1'
+                    ))
 
-    ######################################## 
+                alpha2_weights=tf.Variable(
+                    tf.add(
+                        tf.ones([hidden_units])/hidden_units,
+                        tf.truncated_normal([hidden_units],stddev=0.1)
+                        ),
+                    name=vname+'/alpha2/weights'
+                    )
+                tf.tensordot(hidden1,alpha2_weights,[[0],[0]],name=vname)
+                #alpha2_bias=tf.Variable(
+                    #tf.zeros([1]),
+                    #name=vname+'/alpha2/bias'
+                    #)
+                #tf.add(
+                    #tf.tensordot(hidden1,alpha2_weights,[[0],[0]]),
+                    #tf.tensordot(
+                        #tf.expand_dims(alpha1_bias,0),
+                        #tf.expand_dims(tf.ones(v.get_shape()),0),
+                        #[[0],[0]]
+                        #),
+                    #name=vname
+                    #)
+            count_params()
+            #results['dnowa']=mk_ops_and_train()
+
+    ########################################
     print('writing results to disk')
 
-    with open("results.txt", "a") as myfile:
-        print(
-            ' ', FLAGS.seed,
-            ' ', FLAGS.same_seed,
-            ' ', FLAGS.numproc,
-            ' ', FLAGS.maxproc,
-            ' ', FLAGS.validn,
-            ' ', results['local'],
-            ' ', results['ave'],
-            ' ', results['nowa'],
-            ' ', results['dnowa'],
-            file=myfile
-            )
+    try:
+        os.makedirs('results')
+    except OSError as exception:
+        if exception.errno != errno.EEXIST:
+            raise
+
+    for method in results.keys():
+        if FLAGS.same_seed:
+            same_seed='same'
+        else:
+            same_seed='diff'
+        with open('results/%s-%s-%s'%(FLAGS.model,method,same_seed), 'a') as myfile:
+            print(
+                ' ', FLAGS.seed,
+                ' ', FLAGS.learning_rate,
+                ' ', FLAGS.max_steps,
+                ' ', FLAGS.batch_size,
+                ' ', FLAGS.numproc,
+                ' ', FLAGS.maxproc,
+                ' ', FLAGS.virtual_procs,
+                ' ', FLAGS.validn,
+                ' ', results[method],
+                file=myfile
+                )
 
 ################################################################################
 
@@ -179,7 +276,7 @@ if __name__ == '__main__':
     parser.add_argument(
             '--learning_rate',
             type=float,
-            default=0.01,
+            default=0.001,
             help='Initial learning rate.'
     )
     parser.add_argument(
@@ -247,6 +344,31 @@ if __name__ == '__main__':
             '--validn',
             type=int,
             default=0
+            )
+    parser.add_argument(
+            '--virtual_procs',
+            type=int,
+            default=0
+            )
+    parser.add_argument(
+            '--ave',
+            default=False,
+            action='store_true'
+            )
+    parser.add_argument(
+            '--owa',
+            default=False,
+            action='store_true'
+            )
+    parser.add_argument(
+            '--dowa',
+            default=False,
+            action='store_true'
+            )
+    parser.add_argument(
+            '--anowa',
+            default=False,
+            action='store_true'
             )
 
     FLAGS, unparsed = parser.parse_known_args()

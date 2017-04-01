@@ -50,12 +50,14 @@ def main(_):
     data_sets.train._images=data_sets.train._images[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
     data_sets.train._labels=data_sets.train._labels[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
     data_sets.train._num_examples=trainn
+    print('  train n=%d'%trainn)
 
     validationnm = data_sets.validation._images.shape[0]
     validationn  = int(validationnm / FLAGS.numproc)
     data_sets.validation._images=data_sets.validation._images[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
     data_sets.validation._labels=data_sets.validation._labels[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
     data_sets.validation._num_examples=validationn
+    print('  valid n=%d'%validationn)
 
     # Tell TensorFlow that the model will be built into the default Graph.
     with tf.Graph().as_default():
@@ -74,7 +76,7 @@ def main(_):
         loss = model.loss(logits, labels_placeholder)
         train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, labels_placeholder)
-        
+
         # create a session for running Ops on the Graph.
         if FLAGS.maxcpu==0:
             session_conf=tf.ConfigProto()
@@ -95,7 +97,7 @@ if __name__ == '__main__':
     parser.add_argument(
             '--learning_rate',
             type=float,
-            default=0.0001,
+            default=0.001,
             help='Initial learning rate.'
     )
     parser.add_argument(
@@ -160,4 +162,7 @@ if __name__ == '__main__':
             )
 
     FLAGS, unparsed = parser.parse_known_args()
+    if unparsed:
+        print('unparsed arguments: ',unparsed)
+        exit(1)
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

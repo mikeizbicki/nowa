@@ -8,6 +8,19 @@ import tensorflow as tf
 
 ################################################################################
 
+def count_params():
+    tot=0
+    for v in tf.trainable_variables():
+        name=v.name[:v.name.index(':')]
+        shape=v.get_shape()
+        params=reduce(lambda x,y: x*y,shape)
+        tot=tot+params.value
+        print('  [%s] %d = %s'%(name,params,shape))
+    print('  total %s'%tot)
+    return tot
+
+################################################################################
+
 def do_eval(sess,eval_correct,data_set,FLAGS):
     """Runs one evaluation against the full epoch of data.
 
@@ -49,7 +62,7 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
     if tf.gfile.Exists(local_log_dir):
         tf.gfile.DeleteRecursively(local_log_dir)
     tf.gfile.MakeDirs(local_log_dir)
-    
+
     # create session
     summary = tf.summary.merge_all()
     saver = tf.train.Saver()
@@ -85,10 +98,10 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
             summary_writer.add_summary(summary_str, step)
             summary_writer.flush()
 
+
         # Save a checkpoint and evaluate the model periodically.
         if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
             checkpoint_file = os.path.join(local_log_dir, 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=step)
 
-            #print('Test Data Eval:')
             do_eval(sess,metric,test_set,FLAGS)

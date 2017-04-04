@@ -21,10 +21,17 @@ from common import *
 ################################################################################
 
 def main(_):
-    # process command line args
-    model = importlib.import_module("models.%s" % FLAGS.model)
-    np.random.seed(FLAGS.seed)
 
+    ########################################
+    module_dataset='models.%s.common'%FLAGS.dataset
+    print('loading %s'%module_dataset)
+    datainfo=importlib.import_module(module_dataset)
+
+    module_model='models.%s.%s'%(FLAGS.dataset,FLAGS.model)
+    print('loading %s'%module_model)
+    model=importlib.import_module(module_model)
+
+    np.random.seed(FLAGS.seed)
     results=dict()
 
     ########################################
@@ -66,7 +73,7 @@ def main(_):
         for procid in range(0,FLAGS.maxproc):
             modeldir=os.path.join(
                 FLAGS.log_dir_in,
-                '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,procid)
+                '%s-%s.%d-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.same_seed,FLAGS.numproc,procid)
                 )
             maxitr=max(map(int,sum(
                     map(
@@ -336,6 +343,11 @@ if __name__ == '__main__':
             default=''
             )
     parser.add_argument(
+            '--dataset',
+            type=str,
+            default=''
+            )
+    parser.add_argument(
             '--same_seed',
             default=False,
             action='store_true'
@@ -373,4 +385,7 @@ if __name__ == '__main__':
 
     FLAGS, unparsed = parser.parse_known_args()
     FLAGS.procid=FLAGS.maxproc
+    if unparsed:
+        print('unparsed arguments: ',unparsed)
+        exit(1)
     tf.app.run(main=main, argv=[sys.argv[0]] + unparsed)

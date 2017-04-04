@@ -7,7 +7,6 @@ from __future__ import print_function
 
 # pylint: disable=missing-docstring
 import argparse
-import os.path
 import sys
 import time
 import importlib
@@ -16,12 +15,7 @@ from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
 import numpy as np
 
-from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 from common import *
-from models.common import *
-
-# Basic model parameters as external flags.
-FLAGS = None
 
 ################################################################################
 
@@ -31,33 +25,17 @@ def main(_):
     if FLAGS.numproc <= FLAGS.procid or FLAGS.procid < 0:
         print("procid/numproc combination invalid", file=sys.stderr)
         sys.exit(1)
-    model = importlib.import_module("models.%s" % FLAGS.model)
+
+    module_dataset='models.%s.common'%FLAGS.dataset
+    print('loading module %s'%module_dataset)
+    datainfo=importlib.import_module(module_dataset)
+
+    module_model='models.%s.%s'%(FLAGS.dataset,FLAGS.model)
+    print('loading module %s'%module_model)
+    model=importlib.import_module(module_model)
 
     # load and sample data
-    data_sets = read_data_sets(FLAGS.input_data_dir, FLAGS.fake_data)
-
-    np.random.seed(FLAGS.seed)
-    np.random.shuffle(data_sets.train._images)
-    np.random.seed(FLAGS.seed)
-    np.random.shuffle(data_sets.train._labels)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(data_sets.validation._images)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(data_sets.validation._labels)
-
-    trainnm = data_sets.train._images.shape[0]
-    trainn  = int(trainnm / FLAGS.numproc)
-    data_sets.train._images=data_sets.train._images[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    data_sets.train._labels=data_sets.train._labels[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    data_sets.train._num_examples=trainn
-    print('  train n=%d'%trainn)
-
-    validationnm = data_sets.validation._images.shape[0]
-    validationn  = int(validationnm / FLAGS.numproc)
-    data_sets.validation._images=data_sets.validation._images[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    data_sets.validation._labels=data_sets.validation._labels[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    data_sets.validation._num_examples=validationn
-    print('  valid n=%d'%validationn)
+    (dataset_train,dataset_valid,dataset_test) = model.loaddata(FLAGS)
 
     # Tell TensorFlow that the model will be built into the default Graph.
     with tf.Graph().as_default():
@@ -79,7 +57,8 @@ def main(_):
 
         # create a session for running Ops on the Graph.
         if FLAGS.maxcpu==0:
-            session_conf=tf.ConfigProto()
+            session_conf=tf.ConfigProto(
+                )
         else:
             session_conf = tf.ConfigProto(
                 intra_op_parallelism_threads=1,
@@ -88,7 +67,7 @@ def main(_):
         sess = tf.Session(config=session_conf)
 
         # train model
-        trainmodel(FLAGS,sess,data_sets.train,data_sets.test,train_op,eval_correct)
+        trainmodel(FLAGS,sess,dataset_train,dataset_test,train_op,eval_correct)
 
 ################################################################################
 
@@ -147,6 +126,11 @@ if __name__ == '__main__':
             )
     parser.add_argument(
             '--model',
+            type=str,
+            default=''
+            )
+    parser.add_argument(
+            '--dataset',
             type=str,
             default=''
             )

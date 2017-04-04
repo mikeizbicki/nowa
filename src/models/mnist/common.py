@@ -1,4 +1,38 @@
+import os.path
+import numpy as np
 import tensorflow as tf
+from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
+
+def loaddata(FLAGS):
+    print('loading dataset mnist')
+    datadir_dataset=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
+    datasets = read_data_sets(datadir_dataset,False)
+
+    np.random.seed(FLAGS.seed)
+    np.random.shuffle(datasets.train._images)
+    np.random.seed(FLAGS.seed)
+    np.random.shuffle(datasets.train._labels)
+    np.random.seed(FLAGS.seed+1)
+    np.random.shuffle(datasets.validation._images)
+    np.random.seed(FLAGS.seed+1)
+    np.random.shuffle(datasets.validation._labels)
+
+    trainnm = datasets.train._images.shape[0]
+    trainn  = int(trainnm / FLAGS.numproc)
+    datasets.train._images=datasets.train._images[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
+    datasets.train._labels=datasets.train._labels[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
+    datasets.train._num_examples=trainn
+    print('  train n=%d'%trainn)
+
+    validationnm = datasets.validation._images.shape[0]
+    validationn  = int(validationnm / FLAGS.numproc)
+    datasets.validation._images=datasets.validation._images[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
+    datasets.validation._labels=datasets.validation._labels[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
+    datasets.validation._num_examples=validationn
+
+    print('  valid n=%d'%validationn)
+
+    return (datasets.train,datasets.validation,datasets.test)
 
 # The MNIST dataset has 10 classes, representing the digits 0 through 9.
 NUM_CLASSES = 10

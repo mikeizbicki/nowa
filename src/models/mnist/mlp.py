@@ -6,7 +6,7 @@ import math
 
 import tensorflow as tf
 
-from models.common import *
+from models.mnist.common import *
 
 def inference(images,_):
   hidden1_units=128

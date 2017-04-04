@@ -58,7 +58,7 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
     #tf.reset_default_graph()
 
     # prepare logging
-    local_log_dir=os.path.join(FLAGS.log_dir_out, '%d-%s.%s-%d-%d'%(FLAGS.seed,FLAGS.same_seed,FLAGS.model,FLAGS.numproc,FLAGS.procid))
+    local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))
     if tf.gfile.Exists(local_log_dir):
         tf.gfile.DeleteRecursively(local_log_dir)
     tf.gfile.MakeDirs(local_log_dir)

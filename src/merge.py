@@ -130,8 +130,8 @@ def main(_):
         nowa_eval_correct = model.evaluation(nowa_logits, nowa_labels_placeholder)
 
         sess = tf.Session()
-        trainmodel(FLAGS,sess,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct,augtensors)
-        return do_eval(sess,nowa_eval_correct,data_sets.test,FLAGS)
+        return trainmodel(FLAGS,sess,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct,augtensors)
+        #return do_eval(sess,nowa_eval_correct,data_sets.test,FLAGS)
 
     ####################
     if FLAGS.owa:
@@ -294,7 +294,8 @@ def main(_):
                 ' ', FLAGS.maxproc,
                 ' ', FLAGS.virtual_procs,
                 ' ', FLAGS.validn,
-                ' ', results[method],
+                ' ', 'RESULTS',
+                ' ', ' '.join(map(str,results[method])),
                 file=myfile
                 )
 

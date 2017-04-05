@@ -76,6 +76,7 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
     sess.run(tf.global_variables_initializer(),feed_dict=augtensors2)
 
     # training loop
+    evals=[]
     for step in xrange(FLAGS.max_steps):
         start_time = time.time()
 
@@ -110,4 +111,6 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
             checkpoint_file = os.path.join(local_log_dir, 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=step)
 
-            do_eval(sess,metric,test_set,FLAGS)
+            evals.append(do_eval(sess,metric,test_set,FLAGS))
+
+    return evals

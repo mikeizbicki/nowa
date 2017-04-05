@@ -1,4 +1,4 @@
-#!/usr/bin/python
+#!/usr/bin/env python2.7
 
 """Trains and Evaluates the MNIST network using a feed dictionary."""
 from __future__ import absolute_import
@@ -67,7 +67,7 @@ def main(_):
         sess = tf.Session(config=session_conf)
 
         # train model
-        trainmodel(FLAGS,sess,dataset_train,dataset_test,train_op,eval_correct)
+        trainmodel(FLAGS,sess,dataset_train,dataset_test,train_op,eval_correct,{})
 
 ################################################################################
 
@@ -142,6 +142,11 @@ if __name__ == '__main__':
     parser.add_argument(
             '--maxcpu',
             type=int,
+            default=0
+            )
+    parser.add_argument(
+            '--induced_bias',
+            type=float,
             default=0
             )
 

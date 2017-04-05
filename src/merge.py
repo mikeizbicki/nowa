@@ -1,4 +1,4 @@
-#!/usr/bin/python -u
+#!/usr/bin/env python2.7
 
 from __future__ import print_function
 
@@ -73,7 +73,7 @@ def main(_):
         for procid in range(0,FLAGS.maxproc):
             modeldir=os.path.join(
                 FLAGS.log_dir_in,
-                '%s-%s.%d-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.same_seed,FLAGS.numproc,procid)
+                '%s-%s.%d-%1.2f-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.induced_bias,FLAGS.same_seed,FLAGS.numproc,procid)
                 )
             maxitr=max(map(int,sum(
                     map(
@@ -130,7 +130,7 @@ def main(_):
         nowa_eval_correct = model.evaluation(nowa_logits, nowa_labels_placeholder)
 
         sess = tf.Session()
-        trainmodel(FLAGS,sess,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct)
+        trainmodel(FLAGS,sess,data_sets.validation,data_sets.test,nowa_train_op,nowa_eval_correct,augtensors)
         return do_eval(sess,nowa_eval_correct,data_sets.test,FLAGS)
 
     ####################
@@ -148,8 +148,14 @@ def main(_):
             vars = graph_local.get_collection('trainable_variables')
             for v in vars:
                 vname=v.name[:v.name.index(':')]
+                placeholder=tf.placeholder(
+                    tf.float32,
+                    augtensors[v.name].shape,
+                    name='owa/placeholder/'+vname
+                    )
                 v2=tf.Variable(
-                    augtensors[v.name],
+                    placeholder,
+                    #augtensors[v.name],
                     False,
                     name='owa/'+vname
                     )
@@ -187,7 +193,7 @@ def main(_):
                     name=vname
                     )
             count_params()
-            results['dnowa']=mk_ops_and_train()
+            results['dowa']=mk_ops_and_train()
 
     ####################
     if FLAGS.anowa:
@@ -381,6 +387,11 @@ if __name__ == '__main__':
             '--anowa',
             default=False,
             action='store_true'
+            )
+    parser.add_argument(
+            '--induced_bias',
+            type=float,
+            default=0
             )
 
     FLAGS, unparsed = parser.parse_known_args()

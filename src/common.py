@@ -52,22 +52,26 @@ def do_eval(sess,eval_correct,data_set,FLAGS):
 
 ################################################################################
 
-def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric):
+def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
     # ensure reproducibility
     tf.set_random_seed(0)
     #tf.reset_default_graph()
 
+    for k in augtensors.keys():
+        v=augtensors.pop(k)
+        augtensors['owa/placeholder/'+k]=v
+
     # prepare logging
-    local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))
+    local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%1.2f-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.induced_bias,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))
     if tf.gfile.Exists(local_log_dir):
         tf.gfile.DeleteRecursively(local_log_dir)
     tf.gfile.MakeDirs(local_log_dir)
 
     # create session
     summary = tf.summary.merge_all()
-    saver = tf.train.Saver()
+    saver = tf.train.Saver(max_to_keep=1)
     summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
-    sess.run(tf.global_variables_initializer())
+    sess.run(tf.global_variables_initializer(),feed_dict=augtensors)
 
     # training loop
     for step in xrange(FLAGS.max_steps):

@@ -59,7 +59,9 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
 
     augtensors2=dict()
     for k in augtensors.keys():
-        augtensors2['owa/placeholder/'+k]=augtensors[k]
+        name=k[:k.index(':')]
+        index=k[k.index(':'):]
+        augtensors2['owa/'+name+'/placeholder'+index]=augtensors[k]
 
     # prepare logging
     local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%1.2f-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.induced_bias,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))

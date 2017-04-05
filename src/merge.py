@@ -137,33 +137,36 @@ def main(_):
     if FLAGS.owa:
         print('creating owa model')
         with tf.Graph().as_default():
-            alpha_W=tf.Variable(
-                tf.ones([totproc])/totproc,
-                name='alpha_W'
-                )
-            alpha_bias=tf.Variable(
-                tf.zeros([1]),
-                name='alpha_bias'
-                )
+            with tf.name_scope('owa') as scope_owa:
+                alpha_weights=tf.Variable(
+                    tf.ones([totproc])/totproc,
+                    name='alpha_weights'
+                    )
+                alpha_bias=tf.Variable(
+                    tf.zeros([1]),
+                    name='alpha_bias'
+                    )
             vars = graph_local.get_collection('trainable_variables')
             for v in vars:
                 vname=v.name[:v.name.index(':')]
-                placeholder=tf.placeholder(
-                    tf.float32,
-                    augtensors[v.name].shape,
-                    name='owa/placeholder/'+vname
-                    )
-                v2=tf.Variable(
-                    placeholder,
-                    #augtensors[v.name],
-                    False,
-                    name='owa/'+vname
-                    )
-                tf.add(
-                    tf.tensordot(alpha_W,v2,1),
-                    tf.ones(v.get_shape())*alpha_bias,
-                    name=vname
-                    )
+                with tf.name_scope(scope_owa):
+                    with tf.name_scope(vname):
+                        placeholder=tf.placeholder(
+                            tf.float32,
+                            augtensors[v.name].shape,
+                            name='placeholder'
+                            )
+                        v2=tf.Variable(
+                            placeholder,
+                            False,
+                            name='augtensor'
+                            )
+                        res=tf.add(
+                            tf.tensordot(alpha_weights,v2,1),
+                            tf.ones(v.get_shape())*alpha_bias,
+                            name=vname
+                            )
+                tf.identity(res,name=vname)
             count_params()
             results['owa']=mk_ops_and_train()
 
@@ -171,33 +174,40 @@ def main(_):
     if FLAGS.dowa:
         print('creating dowa model')
         with tf.Graph().as_default():
+            with tf.name_scope('owa') as scope_owa:
+                pass
             vars = graph_local.get_collection('trainable_variables')
             for v in vars:
                 vname=v.name[:v.name.index(':')]
-                alpha_W=tf.Variable(
-                    tf.ones([totproc])/totproc,
-                    name=vname+'/alpha_weights'
-                    )
-                alpha_bias=tf.Variable(
-                    tf.zeros([1]),
-                    name=vname+'/alpha_bias'
-                    )
-                placeholder=tf.placeholder(
-                    tf.float32,
-                    augtensors[v.name].shape,
-                    name='owa/placeholder/'+vname
-                    )
-                v2=tf.Variable(
-                    placeholder,
-                    #augtensors[v.name],
-                    False,
-                    name=vname+'/augtensor'
-                    )
-                tf.add(
-                    tf.tensordot(alpha_W,v2,1),
-                    tf.ones(v.get_shape())*alpha_bias,
-                    name=vname
-                    )
+                with tf.name_scope(scope_owa):
+                    with tf.name_scope(vname):
+                        alpha_weights=tf.Variable(
+                            tf.ones([totproc])/totproc,
+                            name='alpha_weights'
+                            )
+                        alpha_bias=tf.Variable(
+                            tf.zeros([1]),
+                            name='alpha_bias'
+                            )
+                        placeholder=tf.placeholder(
+                            tf.float32,
+                            augtensors[v.name].shape,
+                            name='placeholder'
+                            )
+                        v2=tf.Variable(
+                            placeholder,
+                            False,
+                            name='augtensor'
+                            )
+                        res=tf.add(
+                            tf.tensordot(alpha_weights,v2,1),
+                            tf.multiply(
+                                tf.ones(v.get_shape()),
+                                alpha_bias,
+                                ),
+                            name=vname
+                            )
+                tf.identity(res,name=vname)
             count_params()
             results['dowa']=mk_ops_and_train()
 

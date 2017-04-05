@@ -57,9 +57,9 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
     tf.set_random_seed(0)
     #tf.reset_default_graph()
 
+    augtensors2=dict()
     for k in augtensors.keys():
-        v=augtensors.pop(k)
-        augtensors['owa/placeholder/'+k]=v
+        augtensors2['owa/placeholder/'+k]=augtensors[k]
 
     # prepare logging
     local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%1.2f-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.induced_bias,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))
@@ -71,7 +71,7 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
     summary = tf.summary.merge_all()
     saver = tf.train.Saver(max_to_keep=1)
     summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
-    sess.run(tf.global_variables_initializer(),feed_dict=augtensors)
+    sess.run(tf.global_variables_initializer(),feed_dict=augtensors2)
 
     # training loop
     for step in xrange(FLAGS.max_steps):

@@ -182,8 +182,14 @@ def main(_):
                     tf.zeros([1]),
                     name=vname+'/alpha_bias'
                     )
+                placeholder=tf.placeholder(
+                    tf.float32,
+                    augtensors[v.name].shape,
+                    name='owa/placeholder/'+vname
+                    )
                 v2=tf.Variable(
-                    augtensors[v.name],
+                    placeholder,
+                    #augtensors[v.name],
                     False,
                     name=vname+'/augtensor'
                     )

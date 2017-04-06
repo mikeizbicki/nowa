@@ -106,7 +106,7 @@ def main(_):
             sess_ave = tf.Session()
             for v in tf.trainable_variables():
                 sess_ave.run(tf.assign(v,augtensors[v.name].mean(axis=0)))
-            results['ave']=do_eval(sess_ave,eval_correct,data_sets.test,FLAGS)
+            results['ave']=[do_eval(sess_ave,eval_correct,data_sets.test,FLAGS)]
 
     ########################################
     print('creating virtual procs')

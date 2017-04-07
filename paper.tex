@@ -389,11 +389,50 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+@inproceedings{dean2012large,
+  title={Large scale distributed deep networks},
+  author={Dean, Jeffrey and Corrado, Greg and Monga, Rajat and Chen, Kai and Devin, Matthieu and Mao, Mark and Senior, Andrew and Tucker, Paul and Yang, Ke and Le, Quoc V and others},
+  booktitle={Advances in neural information processing systems},
+  pages={1223--1231},
+  year={2012}
+}
+
+@inproceedings{denil2013predicting,
+  title={Predicting parameters in deep learning},
+  author={Denil, Misha and Shakibi, Babak and Dinh, Laurent and de Freitas, Nando and others},
+  booktitle={Advances in Neural Information Processing Systems},
+  pages={2148--2156},
+  year={2013}
+}
+
 @article{goodfellow2014qualitatively,
   title={Qualitatively characterizing neural network optimization problems},
   author={Goodfellow, Ian J and Vinyals, Oriol and Saxe, Andrew M},
   journal={ICLR},
   year={2015}
+}
+
+@inproceedings{shokri2015privacy,
+  title={Privacy-preserving deep learning},
+  author={Shokri, Reza and Shmatikov, Vitaly},
+  booktitle={Proceedings of the 22nd ACM SIGSAC conference on computer and communications security},
+  pages={1310--1321},
+  year={2015},
+  organization={ACM}
+}
+
+@article{konevcny2016federated,
+  title={Federated learning: Strategies for improving communication efficiency},
+  author={Kone{\v{c}}n{\`y}, Jakub and McMahan, H Brendan and Yu, Felix X and Richt{\'a}rik, Peter and Suresh, Ananda Theertha and Bacon, Dave},
+  journal={arXiv preprint arXiv:1610.05492},
+  year={2016}
+}
+
+@article{bonawitz2016practical,
+  title={Practical Secure Aggregation for Federated Learning on User-Held Data},
+  author={Bonawitz, Keith and Ivanov, Vladimir and Kreuter, Ben and Marcedone, Antonio and McMahan, H Brendan and Patel, Sarvar and Ramage, Daniel and Segal, Aaron and Seth, Karn},
+  journal={arXiv preprint arXiv:1611.04482},
+  year={2016}
 }
 
 @article{mcmahan2016federated,
@@ -409,15 +448,6 @@
   timestamp = {Tue, 01 Mar 2016 17:47:25 +0100},
   biburl    = {http://dblp.uni-trier.de/rec/bib/journals/corr/McMahanMRA16},
   bibsource = {dblp computer science bibliography, http://dblp.org}
-}
-
-@inproceedings{shokri2015privacy,
-  title={Privacy-preserving deep learning},
-  author={Shokri, Reza and Shmatikov, Vitaly},
-  booktitle={Proceedings of the 22nd ACM SIGSAC conference on computer and communications security},
-  pages={1310--1321},
-  year={2015},
-  organization={ACM}
 }
 
 @inproceedings{abadi2016deep,
@@ -443,9 +473,17 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
+Lots of good references on large scale deep learning in \cite{dean2012large}.
+
+\cite{denil2013predicting} factors the weight matrices of neural networks to reduce the number of parameters that need to be learned in a network.
+They rely on the smoothness of the parameters that is caused by images.
+\cite{konevcny2016federated} builds on this work for the federated learning setting.
+
 Google used a highly decentralized training procedure to train models on phones and have a central server average the model parameters.
 Their procedure uses many rounds of communication, but they show experiments on MNIST with a single round.
 \cite{mcmahan2016federated}
+
+\url{https://research.googleblog.com/2017/04/federated-learning-collaborative.html}
 
 \cite{goodfellow2014qualitatively} shows with experiments that neural networks rarely get stuck in local optima.
 

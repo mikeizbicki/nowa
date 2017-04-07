@@ -6,9 +6,9 @@ import math
 
 import tensorflow as tf
 
-from models.mnist.common import *
-
-def inference(images,_):
+def inference(images,datainfo,_):
+  IMAGE_PIXELS=datainfo.IMAGE_PIXELS
+  NUM_CLASSES=datainfo.NUM_CLASSES
   hidden1_units=128
   hidden2_units=32
   """Build the MNIST model up to where it may be used for inference.

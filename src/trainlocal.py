@@ -26,16 +26,16 @@ def main(_):
         print("procid/numproc combination invalid", file=sys.stderr)
         sys.exit(1)
 
-    module_dataset='models.%s.common'%FLAGS.dataset
+    module_dataset='data.%s'%FLAGS.dataset
     print('loading module %s'%module_dataset)
     datainfo=importlib.import_module(module_dataset)
 
-    module_model='models.%s.%s'%(FLAGS.dataset,FLAGS.model)
+    module_model='models.%s'%FLAGS.model
     print('loading module %s'%module_model)
     model=importlib.import_module(module_model)
 
     # load and sample data
-    (dataset_train,dataset_valid,dataset_test) = model.loaddata(FLAGS)
+    (dataset_train,dataset_valid,dataset_test) = datainfo.loaddata(FLAGS)
 
     # Tell TensorFlow that the model will be built into the default Graph.
     with tf.Graph().as_default():
@@ -47,13 +47,13 @@ def main(_):
         tf.set_random_seed(seed)
 
         # create the graph
-        images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,model.IMAGE_PIXELS))
+        images_placeholder = tf.placeholder(tf.float32, shape=(FLAGS.batch_size,datainfo.IMAGE_PIXELS))
         labels_placeholder = tf.placeholder(tf.int32, shape=(FLAGS.batch_size))
         dropout_rate = tf.placeholder(tf.float32)
-        logits = model.inference(images_placeholder,dropout_rate)
-        loss = model.loss(logits, labels_placeholder)
-        train_op = model.training(loss, FLAGS.learning_rate)
-        eval_correct = model.evaluation(logits, labels_placeholder)
+        logits = model.inference(images_placeholder,datainfo,dropout_rate)
+        loss = datainfo.loss(logits, labels_placeholder)
+        train_op = datainfo.training(loss, FLAGS.learning_rate)
+        eval_correct = datainfo.evaluation(logits, labels_placeholder)
 
         # create a session for running Ops on the Graph.
         if FLAGS.maxcpu==0:

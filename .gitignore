@@ -12,5 +12,7 @@
 
 *.gz
 
+results
+data
 log
 output

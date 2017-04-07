@@ -1,9 +1,8 @@
 ''' Derived from https://www.tensorflow.org/get_started/mnist/pros
 '''
 import tensorflow as tf
-from common import *
 
-def inference(images,dropout_rate):
+def inference(images,datainfo,dropout_rate):
 
     def weight_variable(shape):
         initial = tf.truncated_normal(shape, stddev=0.1)
@@ -22,7 +21,7 @@ def inference(images,dropout_rate):
     W_conv1 = weight_variable([10,10,1,32])
     b_conv1 = bias_variable([32])
 
-    x_image = tf.reshape(images,[-1,28,28,1])
+    x_image = tf.reshape(images,[-1,datainfo.IMAGE_SIZE,datainfo.IMAGE_SIZE,1])
 
     h_conv1 = tf.nn.relu(conv2d(x_image,W_conv1) + b_conv1)
     h_pool1 = max_pool_2x2(h_conv1)
@@ -42,8 +41,8 @@ def inference(images,dropout_rate):
     #keep_prob = tf.placeholder(tf.float32)
     h_fc1_drop = tf.nn.dropout(h_fc1, dropout_rate)
 
-    W_fc2 = weight_variable([1024, 10])
-    b_fc2 = bias_variable([10])
+    W_fc2 = weight_variable([1024, datainfo.NUM_CLASSES])
+    b_fc2 = bias_variable([datainfo.NUM_CLASSES])
 
     y_conv = tf.matmul(h_fc1_drop, W_fc2) + b_fc2
 

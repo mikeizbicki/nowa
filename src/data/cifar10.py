@@ -1,45 +1,65 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
+import collections
 import os.path
 import numpy as np
 import tensorflow as tf
-from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
+from tensorflow.contrib.learn.python.learn.datasets import base
+from tensorflow.contrib.learn.python.learn.datasets.mnist import DataSet
+from tflearn.datasets import cifar10
+from tflearn.data_utils import to_categorical
+
+NUM_CLASSES = 10
+IMAGE_SIZE = 32
+IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 
 def loaddata(FLAGS):
-    print('loading dataset mnist')
+    print('loading dataset cifar10')
     datadir_dataset=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
-    datasets = read_data_sets(datadir_dataset,False)
+    (X, Y), (X_test, Y_test) = cifar10.load_data(dirname=datadir_dataset)
+    Y = to_categorical(Y, 10)
+    Y_test = to_categorical(Y_test, 10)
 
     np.random.seed(FLAGS.seed)
-    np.random.shuffle(datasets.train._images)
+    np.random.shuffle(X)
     np.random.seed(FLAGS.seed)
-    np.random.shuffle(datasets.train._labels)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(datasets.validation._images)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(datasets.validation._labels)
+    np.random.shuffle(Y)
+    #np.random.seed(FLAGS.seed+1)
+    #np.random.shuffle(datasets.validation.data)
+    #np.random.seed(FLAGS.seed+1)
+    #np.random.shuffle(datasets.validation.target)
 
-    trainnm = datasets.train._images.shape[0]
+    trainnm = X.shape[0]
     trainn  = int(trainnm / FLAGS.numproc)
-    datasets.train._images=datasets.train._images[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    datasets.train._labels=datasets.train._labels[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    datasets.train._num_examples=trainn
+    datasets_train=DataSet(
+        data=X[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)],
+        target=Y[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
+        )
+    #datasets.train.data=datasets.train.data[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
+    #datasets.train.target=datasets.train.target[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
+    #datasets.train._num_examples=trainn
     print('  train n=%d'%trainn)
 
-    validationnm = datasets.validation._images.shape[0]
-    validationn  = int(validationnm / FLAGS.numproc)
-    datasets.validation._images=datasets.validation._images[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    datasets.validation._labels=datasets.validation._labels[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    datasets.validation._num_examples=validationn
+    #validationnm = datasets.validation.data.shape[0]
+    #validationn  = int(validationnm / FLAGS.numproc)
+    datasets_validation=base.Dataset([],[])
+    #datasets.validation.data=datasets.validation.data[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
+    #datasets.validation.target=datasets.validation.target[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
+    #datasets.validation._num_examples=validationn
 
-    print('  valid n=%d'%validationn)
+    #print('  valid n=%d'%validationn)
 
-    return (datasets.train,datasets.validation,datasets.test)
+    datasets_test=base.Dataset(
+        data=X_test,
+        target=Y_test
+        )
 
-# The MNIST dataset has 10 classes, representing the digits 0 through 9.
-NUM_CLASSES = 10
+    #return (datasets.train,datasets.validation,datasets.test)
+    return (datasets_train,datasets_validation,datasets_test)
 
-# The MNIST images are always 28x28 pixels.
-IMAGE_SIZE = 28
-IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
+########################################
 
 def loss(logits, labels):
   """Calculates the loss from the logits and the labels.

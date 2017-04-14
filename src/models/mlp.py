@@ -3,12 +3,13 @@ from __future__ import division
 from __future__ import print_function
 
 import math
-
 import tensorflow as tf
+from models.common_images import *
 
-def inference(images,datainfo,_):
+def inference(images,datainfo):
   IMAGE_PIXELS=datainfo.IMAGE_PIXELS
   NUM_CLASSES=datainfo.NUM_CLASSES
+  images=tf.reshape(images,[-1,IMAGE_PIXELS])
   hidden1_units=128
   hidden2_units=32
   """Build the MNIST model up to where it may be used for inference.

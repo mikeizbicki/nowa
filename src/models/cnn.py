@@ -1,6 +1,7 @@
 ''' Derived from https://www.tensorflow.org/get_started/mnist/pros
 '''
 import tensorflow as tf
+from models.common_images import *
 
 def inference(images,datainfo,dropout_rate):
 

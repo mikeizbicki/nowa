@@ -13,6 +13,7 @@
 *.gz
 
 results
-data
+/data
 log
+log.placeholder
 output

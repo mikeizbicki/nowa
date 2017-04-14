@@ -19,6 +19,20 @@ def count_params():
     print('  total %s'%tot)
     return tot
 
+def flags2logdir(FLAGS):
+    return os.path.join(
+        FLAGS.log_dir_out,
+        '%s-%s.%d-%1.2f-%s.%d-%d'%(
+            FLAGS.dataset,
+            FLAGS.model,
+            FLAGS.seed,
+            FLAGS.induced_bias,
+            FLAGS.same_seed,
+            FLAGS.numproc,
+            FLAGS.procid
+            )
+        )
+
 ################################################################################
 
 def do_eval(sess,eval_correct,data_set,FLAGS):
@@ -52,7 +66,7 @@ def do_eval(sess,eval_correct,data_set,FLAGS):
 
 ################################################################################
 
-def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
+def trainmodel(FLAGS,train_set,test_set,train_op,metric,augtensors):
     # ensure reproducibility
     tf.set_random_seed(0)
     #tf.reset_default_graph()
@@ -64,53 +78,62 @@ def trainmodel(FLAGS,sess,train_set,test_set,train_op,metric,augtensors):
         augtensors2['owa/'+name+'/placeholder'+index]=augtensors[k]
 
     # prepare logging
-    local_log_dir=os.path.join(FLAGS.log_dir_out, '%s-%s.%d-%1.2f-%s.%d-%d'%(FLAGS.dataset,FLAGS.model,FLAGS.seed,FLAGS.induced_bias,FLAGS.same_seed,FLAGS.numproc,FLAGS.procid))
+    local_log_dir=flags2logdir(FLAGS)
     if tf.gfile.Exists(local_log_dir):
         tf.gfile.DeleteRecursively(local_log_dir)
     tf.gfile.MakeDirs(local_log_dir)
 
     # create session
+    if FLAGS.maxcpu==0:
+        session_conf=tf.ConfigProto(
+            )
+    else:
+        session_conf = tf.ConfigProto(
+            intra_op_parallelism_threads=1,
+            inter_op_parallelism_threads=1
+            )
+    sess = tf.Session(config=session_conf)
+
+    if FLAGS.allcheckpoints:
+        saver = tf.train.Saver(max_to_keep=None)
+    else:
+        saver = tf.train.Saver(max_to_keep=1)
     summary = tf.summary.merge_all()
-    saver = tf.train.Saver(max_to_keep=1)
     summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
-    sess.run(tf.global_variables_initializer(),feed_dict=augtensors2)
+    sess.run(
+        tf.group(
+            tf.global_variables_initializer(),
+            tf.local_variables_initializer(),
+            ),
+        feed_dict=augtensors2
+        )
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
 
     # training loop
     evals=[]
+    tot=0
+    start_time = time.time()
     for step in xrange(FLAGS.max_steps):
-        start_time = time.time()
 
-        # Fill a feed dictionary with the actual set of images and labels
-        # for this particular training step.
-        images_feed, labels_feed = train_set.next_batch(FLAGS.batch_size,FLAGS.fake_data)
-        feed_dict = {
-                'Placeholder:0': images_feed,
-                'Placeholder_1:0': labels_feed,
-                'Placeholder_2:0': 0.4,
-        }
-
-        # Run one step of the model.  The return values are the activations
-        # from the `train_op` (which is discarded) and the `loss` Op.  To
-        # inspect the values of your Ops or variables, you may include them
-        # in the list passed to sess.run() and the value tensors will be
-        # returned in the tuple from the call.
-        _, metric_value = sess.run([train_op, metric],feed_dict=feed_dict)
+        _, metric_value = sess.run([train_op, metric])
+        tot+=metric_value
 
         duration = time.time() - start_time
 
         # Write the summaries and print an overview fairly often.
         if step % 100 == 0:
-            print('  step %d: metric = %.2f (%.3f sec)' % (step, metric_value, duration))
-            summary_str = sess.run(summary, feed_dict=feed_dict)
+            print('  step %d: metric = %.2f (%.3f sec)' % (step, tot, duration))
+            tot=0
+            start_time = time.time()
+            summary_str = sess.run(summary)
             summary_writer.add_summary(summary_str, step)
             summary_writer.flush()
-
 
         # Save a checkpoint and evaluate the model periodically.
         if (step + 1) % 1000 == 0 or (step + 1) == FLAGS.max_steps:
             checkpoint_file = os.path.join(local_log_dir, 'model.ckpt')
             saver.save(sess, checkpoint_file, global_step=step)
 
-            evals.append(do_eval(sess,metric,test_set,FLAGS))
-
+    sess.close()
     return evals

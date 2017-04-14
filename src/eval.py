@@ -7,9 +7,10 @@ from __future__ import print_function
 
 # pylint: disable=missing-docstring
 import argparse
+import importlib
+import re
 import sys
 import time
-import importlib
 
 from six.moves import xrange  # pylint: disable=redefined-builtin
 import tensorflow as tf
@@ -20,6 +21,8 @@ from common import *
 from parser import *
 
 ################################################################################
+
+########################################
 
 if __name__ == '__main__':
 
@@ -36,7 +39,7 @@ if __name__ == '__main__':
     print('loading module %s'%module_model)
     model=importlib.import_module(module_model)
 
-    # train model
+    # test model
     with tf.Graph().as_default():
 
         # make computations as deterministic as possible
@@ -46,22 +49,56 @@ if __name__ == '__main__':
             seed+=FLAGS.procid
         tf.set_random_seed(seed)
 
-        # create inputs
+        # create graph
         with tf.name_scope('input'):
-            x,y = datainfo.training_data(FLAGS)
+            x,y = datainfo.testing_data(FLAGS)
             X,Y = tf.train.batch(
                 [x,y],
                 batch_size=FLAGS.batch_size,
                 num_threads=16,
                 capacity=5*FLAGS.batch_size
                 )
-
-        # create computations
         logits = model.inference(X,datainfo)
-        loss = model.loss(logits, Y)
-        train_op = model.training(loss, FLAGS.learning_rate)
         eval_correct = model.evaluation(logits, Y)
 
-        # train model
-        trainmodel(FLAGS,[],[],train_op,eval_correct,{})
+        # get list of checkpoints
+        modeldir=flags2logdir(FLAGS)
+        checkpoints=sorted(list(set(map(int,sum(
+            map(
+                lambda x:re.findall('\d+',x),
+                sum(map(lambda x:re.findall(r'model.ckpt.\d+',x), os.listdir(modeldir)),[])
+                ),
+            [],
+            )))))
+        print('checkpoints for %s'%modeldir)
 
+        # process each checkpoint
+        for checkpoint in checkpoints:
+
+            sess=tf.Session()
+            sess.run(tf.global_variables_initializer())
+            sess.run(tf.local_variables_initializer())
+
+            saver = tf.train.Saver()
+            saver.restore(sess, os.path.join(modeldir,'model.ckpt-%d'%checkpoint))
+
+            # eval loop
+            coord = tf.train.Coordinator()
+            threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+            try:
+                step=0
+                tot=0
+                while not coord.should_stop():
+                    tot+=sess.run(eval_correct)
+                    step+=1
+            except tf.errors.OutOfRangeError:
+                pass
+                #print('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
+
+            ave=float(tot)/(step*FLAGS.batch_size)
+            print('  %8d: %f'%(checkpoint,ave))
+
+            coord.request_stop()
+            coord.join(threads, stop_grace_period_secs=10)
+            sess.close()

@@ -7,9 +7,10 @@
 
 *.swp
 *.swo
+*.swn
 
 *.pyc
-
+*.sh
 *.gz
 
 results

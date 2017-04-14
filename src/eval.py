@@ -58,7 +58,7 @@ if __name__ == '__main__':
                 num_threads=16,
                 capacity=5*FLAGS.batch_size
                 )
-        logits = model.inference(X,datainfo)
+        logits = model.inference(X,datainfo,is_training=False)
         eval_correct = model.evaluation(logits, Y)
 
         # get list of checkpoints
@@ -96,7 +96,7 @@ if __name__ == '__main__':
                 pass
                 #print('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
 
-            ave=float(tot)/(step*FLAGS.batch_size)
+            ave=float(tot)#/(step*FLAGS.batch_size)
             print('  %8d: %f'%(checkpoint,ave))
 
             coord.request_stop()

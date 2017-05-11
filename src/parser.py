@@ -59,12 +59,12 @@ parser.add_argument(
 parser.add_argument(
         '--model',
         type=str,
-        default=''
+        required=True
         )
 parser.add_argument(
         '--dataset',
         type=str,
-        default=''
+        required=True
         )
 parser.add_argument(
         '--same_seed',
@@ -88,6 +88,12 @@ parser.add_argument(
         )
 
 FLAGS, unparsed = parser.parse_known_args()
+if FLAGS.dataset==None:
+    print('must specify a dataset')
+    exit(1)
+if FLAGS.model==None:
+    print('must specify a model')
+    exit(1)
 if unparsed:
     print('unparsed arguments: ',unparsed)
     exit(1)

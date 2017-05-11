@@ -1,3 +1,7 @@
+from __future__ import absolute_import
+from __future__ import division
+from __future__ import print_function
+
 import os.path
 import numpy as np
 import tensorflow as tf
@@ -6,101 +10,50 @@ from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
 NUM_CLASSES = 10
 IMAGE_SIZE = 28
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
-
-def loaddata(FLAGS):
-    print('loading dataset mnist')
-    datadir_dataset=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
-    datasets = read_data_sets(datadir_dataset,False)
-
-    np.random.seed(FLAGS.seed)
-    np.random.shuffle(datasets.train._images)
-    np.random.seed(FLAGS.seed)
-    np.random.shuffle(datasets.train._labels)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(datasets.validation._images)
-    np.random.seed(FLAGS.seed+1)
-    np.random.shuffle(datasets.validation._labels)
-
-    trainnm = datasets.train._images.shape[0]
-    trainn  = int(trainnm / FLAGS.numproc)
-    datasets.train._images=datasets.train._images[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    datasets.train._labels=datasets.train._labels[trainn*FLAGS.procid:trainn*(FLAGS.procid+1)]
-    datasets.train._num_examples=trainn
-    print('  train n=%d'%trainn)
-
-    validationnm = datasets.validation._images.shape[0]
-    validationn  = int(validationnm / FLAGS.numproc)
-    datasets.validation._images=datasets.validation._images[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    datasets.validation._labels=datasets.validation._labels[validationn*FLAGS.procid:validationn*(FLAGS.procid+1)]
-    datasets.validation._num_examples=validationn
-
-    print('  valid n=%d'%validationn)
-
-    return (datasets.train,datasets.validation,datasets.test)
+IMAGE_COLORS = 1
 
 ########################################
 
-def loss(logits, labels):
-  """Calculates the loss from the logits and the labels.
+def testing_data(FLAGS):
+    print('constructing testing input for mnist')
+    datafiles=['test.tfrecords']
+    datadir=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
+    datapaths = [ os.path.join(datadir, datafile) for datafile in datafiles ]
+    filename_queue = tf.train.string_input_producer(datapaths,num_epochs=1)
+    return load_data_from_files(filename_queue)
 
-  Args:
-    logits: Logits tensor, float - [batch_size, NUM_CLASSES].
-    labels: Labels tensor, int32 - [batch_size].
+def training_data(FLAGS):
+    print('constructing training input for mnist')
+    datafiles=['train.tfrecords']
+    datadir=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
+    datapaths = [ os.path.join(datadir, datafile) for datafile in datafiles ]
+    filename_queue = tf.train.string_input_producer(datapaths)
+    return load_data_from_files(filename_queue)
 
-  Returns:
-    loss: Loss tensor of type float.
-  """
-  labels = tf.to_int64(labels)
-  cross_entropy = tf.nn.sparse_softmax_cross_entropy_with_logits(
-      labels=labels, logits=logits, name='xentropy')
-  return tf.reduce_mean(cross_entropy, name='xentropy_mean')
+def load_data_from_files(filename_queue):
+    reader = tf.TFRecordReader()
+    _, serialized_example = reader.read(filename_queue)
+    features = tf.parse_single_example(
+        serialized_example,
+        features={
+            'image_raw': tf.FixedLenFeature([], tf.string),
+            'label': tf.FixedLenFeature([], tf.int64),
+        })
 
+    image = tf.decode_raw(features['image_raw'], tf.uint8)
+    image.set_shape([IMAGE_PIXELS])
+    image = tf.cast(image, tf.float32) * (1. / 255) - 0.5
 
-def training(loss, learning_rate):
-  """Sets up the training Ops.
+    label = tf.cast(features['label'], tf.int32)
 
-  Creates a summarizer to track the loss over time in TensorBoard.
+    #image,label=tf.cond(
+        #tf.equal(
+            #tf.string_to_hash_bucket_strong(key,FLAGS.numproc,[0,FLAGS.seed]),
+            #FLAGS.procid
+            #),
+        #lambda: [tf.expand_dims(image,0),tf.expand_dims(label,0)],
+        #lambda: [tf.zeros([0]+image.get_shape().as_list()),tf.zeros([0],dtype=tf.int32)]
+        #)
 
-  Creates an optimizer and applies the gradients to all trainable variables.
+    return image,label
 
-  The Op returned by this function is what must be passed to the
-  `sess.run()` call to cause the model to train.
-
-  Args:
-    loss: Loss tensor, from loss().
-    learning_rate: The learning rate to use for gradient descent.
-
-  Returns:
-    train_op: The Op for training.
-  """
-  # Add a scalar summary for the snapshot loss.
-  tf.summary.scalar('loss', loss)
-  # Create the gradient descent optimizer with the given learning rate.
-  optimizer = tf.train.AdamOptimizer(learning_rate)
-  # Create a variable to track the global step.
-  global_step = tf.Variable(0, name='global_step', trainable=False)
-  # Use the optimizer to apply the gradients that minimize the loss
-  # (and also increment the global step counter) as a single training step.
-  train_op = optimizer.minimize(loss, global_step=global_step)
-  return train_op
-
-
-def evaluation(logits, labels):
-  """Evaluate the quality of the logits at predicting the label.
-
-  Args:
-    logits: Logits tensor, float - [batch_size, NUM_CLASSES].
-    labels: Labels tensor, int32 - [batch_size], with values in the
-      range [0, NUM_CLASSES).
-
-  Returns:
-    A scalar int32 tensor with the number of examples (out of batch_size)
-    that were predicted correctly.
-  """
-  # For a classifier model, we can use the in_top_k Op.
-  # It returns a bool tensor with shape [batch_size] that is true for
-  # the examples where the label is in the top k (here k=1)
-  # of all logits for that example.
-  correct = tf.nn.in_top_k(logits, labels, 1)
-  # Return the number of true entries.
-  return tf.reduce_sum(tf.cast(correct, tf.int32))

@@ -43,7 +43,12 @@ def testing_data(FLAGS):
 
 def training_data(FLAGS):
     print('constructing training input for imagenet')
-    datafiles=['train-%05d-of-01024'%i for i in range(1024)]
+    numfiles=int(1024/FLAGS.numproc)
+    startfile=FLAGS.procid*numfiles
+    endfile=(1+FLAGS.procid)*numfiles
+    print('startfile=%d'%startfile)
+    print('endfile=%d'%endfile)
+    datafiles=['train-%05d-of-01024'%i for i in range(startfile,endfile)]
     datadir=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
     datapaths = [ os.path.join(datadir, datafile) for datafile in datafiles ]
     _,dataqueue = parallel_reader.parallel_read(

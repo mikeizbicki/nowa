@@ -22,7 +22,7 @@ from __future__ import print_function
 
 import tensorflow as tf
 
-_PADDING = 4
+_PADDING = 0
 
 slim = tf.contrib.slim
 

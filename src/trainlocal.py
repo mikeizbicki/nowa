@@ -49,11 +49,13 @@ if __name__ == '__main__':
         # create inputs
         with tf.name_scope('input'):
             x,y = datainfo.training_data(FLAGS)
-            X,Y = tf.train.batch(
+            X,Y = tf.train.shuffle_batch(
                 [x,y],
                 batch_size=FLAGS.batch_size,
                 num_threads=16,
-                capacity=5*FLAGS.batch_size
+                capacity=5*FLAGS.batch_size,
+                seed=FLAGS.seed,
+                min_after_dequeue=4*FLAGS.batch_size
                 )
 
         # create computations

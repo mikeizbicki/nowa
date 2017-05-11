@@ -70,7 +70,12 @@ if __name__ == '__main__':
                 ),
             [],
             )))))
+        if not FLAGS.allcheckpoints:
+            checkpoints=[max(checkpoints)]
+        checkpoints=checkpoints[0::10]
         print('checkpoints for %s'%modeldir)
+
+        file=open('eval.out','w')
 
         # process each checkpoint
         for checkpoint in checkpoints:
@@ -96,8 +101,10 @@ if __name__ == '__main__':
                 pass
                 #print('Done training for %d epochs, %d steps.' % (FLAGS.num_epochs, step))
 
-            ave=float(tot)#/(step*FLAGS.batch_size)
+            ave=float(tot/(step*FLAGS.batch_size))
             print('  %8d: %f'%(checkpoint,ave))
+            print('  %8d: %f'%(checkpoint,ave),file=file)
+            file.flush()
 
             coord.request_stop()
             coord.join(threads, stop_grace_period_secs=10)

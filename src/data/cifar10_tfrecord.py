@@ -10,8 +10,12 @@ import tensorflow.contrib.slim as slim
 from tensorflow.contrib.slim.python.slim.data import data_provider
 from tensorflow.contrib.slim.python.slim.data import parallel_reader
 
+import preprocessing.cifarnet_preprocessing as preprocessing
+
 NUM_CLASSES = 10
 IMAGE_SIZE = 32
+IMAGE_WIDTH = 32
+IMAGE_HEIGHT = 32
 IMAGE_COLORS = 3
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE * IMAGE_COLORS
 
@@ -28,7 +32,9 @@ def testing_data(FLAGS):
         seed=FLAGS.seed,
         num_epochs=1
         )
-    return load_data_from_files(dataqueue)
+    image,label=load_data_from_files(dataqueue)
+    image=preprocessing.preprocess_image(image,IMAGE_HEIGHT,IMAGE_WIDTH,is_training=False)
+    return image,label
 
 def training_data(FLAGS):
     print('constructing training input for cifar10')
@@ -40,7 +46,9 @@ def training_data(FLAGS):
         tf.TFRecordReader,
         seed=FLAGS.seed
         )
-    return load_data_from_files(dataqueue)
+    image,label=load_data_from_files(dataqueue)
+    image=preprocessing.preprocess_image(image,IMAGE_HEIGHT,IMAGE_WIDTH,is_training=True)
+    return image,label
 
 def load_data_from_files(dataqueue):
     keys_to_features = {
@@ -61,6 +69,6 @@ def load_data_from_files(dataqueue):
     decoder = slim.tfexample_decoder.TFExampleDecoder(keys_to_features, items_to_handlers)
     [image,label] = decoder.decode(dataqueue,['image','label'])
 
-    image = tf.cast(image, tf.float32) * (1. / 255) - 0.5
+    #image = tf.cast(image, tf.float32) * (1. / 255) - 0.5
 
     return image,label

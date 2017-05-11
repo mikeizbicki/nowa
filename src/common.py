@@ -1,6 +1,7 @@
 import argparse
 import importlib
 import os.path
+import re
 import sys
 import time
 
@@ -77,12 +78,6 @@ def trainmodel(FLAGS,train_set,test_set,train_op,metric,augtensors):
         index=k[k.index(':'):]
         augtensors2['owa/'+name+'/placeholder'+index]=augtensors[k]
 
-    # prepare logging
-    local_log_dir=flags2logdir(FLAGS)
-    if tf.gfile.Exists(local_log_dir):
-        tf.gfile.DeleteRecursively(local_log_dir)
-    tf.gfile.MakeDirs(local_log_dir)
-
     # create session
     if FLAGS.maxcpu==0:
         session_conf=tf.ConfigProto(
@@ -93,13 +88,6 @@ def trainmodel(FLAGS,train_set,test_set,train_op,metric,augtensors):
             inter_op_parallelism_threads=1
             )
     sess = tf.Session(config=session_conf)
-
-    if FLAGS.allcheckpoints:
-        saver = tf.train.Saver(max_to_keep=None)
-    else:
-        saver = tf.train.Saver(max_to_keep=1)
-    summary = tf.summary.merge_all()
-    summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
     sess.run(
         tf.group(
             tf.global_variables_initializer(),
@@ -107,14 +95,39 @@ def trainmodel(FLAGS,train_set,test_set,train_op,metric,augtensors):
             ),
         feed_dict=augtensors2
         )
-    coord = tf.train.Coordinator()
-    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
+
+    # prepare logging
+    if FLAGS.allcheckpoints:
+        saver = tf.train.Saver(max_to_keep=None)
+    else:
+        saver = tf.train.Saver(max_to_keep=1)
+
+    local_log_dir=flags2logdir(FLAGS)
+    if tf.gfile.Exists(local_log_dir):
+        tf.gfile.DeleteRecursively(local_log_dir)
+        #checkpoints=sorted(list(set(map(int,sum(
+            #map(
+                #lambda x:re.findall('\d+',x),
+                #sum(map(lambda x:re.findall(r'model.ckpt.\d+',x), os.listdir(local_log_dir)),[])
+                #),
+            #[],
+            #)))))
+        #checkpoint=max(checkpoints)
+        #saver.restore(sess, os.path.join(local_log_dir,'model.ckpt-%d'%checkpoint))
+    #else:
+    checkpoint=0
+    tf.gfile.MakeDirs(local_log_dir)
+
+    summary = tf.summary.merge_all()
+    summary_writer = tf.summary.FileWriter(local_log_dir, sess.graph)
 
     # training loop
+    coord = tf.train.Coordinator()
+    threads = tf.train.start_queue_runners(sess=sess, coord=coord)
     evals=[]
     tot=0
     start_time = time.time()
-    for step in xrange(FLAGS.max_steps):
+    for step in map(lambda x:x+checkpoint,xrange(FLAGS.max_steps)):
 
         _, metric_value = sess.run([train_op, metric])
         tot+=metric_value

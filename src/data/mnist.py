@@ -56,21 +56,6 @@ def training_data(FLAGS):
     queue_runner.add_queue_runner(qr)
     [image,label,uid]=shufq.dequeue()
 
-    # add image noise
-    r1=tf.random_uniform(
-        shape=image.shape,
-        minval=-0.5,
-        maxval=0.5,
-        seed=0
-        )
-    r2=Bernoulli(
-        probs=tf.ones(image.shape)*0.1,
-        dtype=tf.float32
-        ).sample(seed=0)
-    r2inv=tf.ones(image.shape)-r2
-
-    image=image*r2inv + r1*r2
-
     return image,label
 
 def load_data_from_files(datapaths):

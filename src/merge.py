@@ -22,6 +22,8 @@ from common import *
 
 def main(_):
 
+    FLAGS=parseArgs()
+
     ########################################
     module_dataset='models.%s.common'%FLAGS.dataset
     print('loading %s'%module_dataset)

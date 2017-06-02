@@ -26,6 +26,8 @@ from parser import *
 
 if __name__ == '__main__':
 
+    FLAGS=parseArgs()
+
     # process command line args
     if FLAGS.numproc <= FLAGS.procid or FLAGS.procid < 0:
         print("procid/numproc combination invalid", file=sys.stderr)

@@ -6,11 +6,15 @@ import os.path
 import numpy as np
 import tensorflow as tf
 from tensorflow.contrib.learn.python.learn.datasets.mnist import read_data_sets
+from tensorflow.python.training import queue_runner
+from tensorflow.contrib.distributions import Bernoulli
 
 NUM_CLASSES = 10
 IMAGE_SIZE = 28
 IMAGE_PIXELS = IMAGE_SIZE * IMAGE_SIZE
 IMAGE_COLORS = 1
+
+TRAINING_SIZE = 55000
 
 ########################################
 
@@ -19,19 +23,62 @@ def testing_data(FLAGS):
     datafiles=['test.tfrecords']
     datadir=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
     datapaths = [ os.path.join(datadir, datafile) for datafile in datafiles ]
-    filename_queue = tf.train.string_input_producer(datapaths,num_epochs=1)
-    return load_data_from_files(filename_queue)
+    return load_data_from_files(datapaths)
 
 def training_data(FLAGS):
+    # load raw data
     print('constructing training input for mnist')
     datafiles=['train.tfrecords']
     datadir=os.path.join(FLAGS.input_data_dir,FLAGS.dataset)
     datapaths = [ os.path.join(datadir, datafile) for datafile in datafiles ]
-    filename_queue = tf.train.string_input_producer(datapaths)
-    return load_data_from_files(filename_queue)
+    image,label = load_data_from_files(datapaths)
 
-def load_data_from_files(filename_queue):
+    # filter data for procid
+    numdp = TRAINING_SIZE
+    uidqueue = tf.FIFOQueue(1000,tf.int32)
+    uidcounter = tf.Variable(0,name='uidcounter',dtype=tf.int32)
+    enqueue_op = uidqueue.enqueue(uidcounter.assign((uidcounter+1)%numdp))
+    qr = tf.train.QueueRunner(uidqueue,[enqueue_op])
+    queue_runner.add_queue_runner(qr)
+    uid = uidqueue.dequeue()
+
+    shufq = tf.FIFOQueue(
+        1000,
+        [image.dtype,label.dtype,uid.dtype],
+        shapes=[image.shape,label.shape,label.shape],
+        )
+    enqueue_op = tf.cond(
+        tf.equal(uid%FLAGS.numproc,FLAGS.procid),
+        lambda: shufq.enqueue([image,label,uid]),
+        lambda: tf.no_op()
+        )
+    qr = tf.train.QueueRunner(shufq,[enqueue_op])
+    queue_runner.add_queue_runner(qr)
+    [image,label,uid]=shufq.dequeue()
+
+    # add image noise
+    r1=tf.random_uniform(
+        shape=image.shape,
+        minval=-0.5,
+        maxval=0.5,
+        seed=0
+        )
+    r2=Bernoulli(
+        probs=tf.ones(image.shape)*0.1,
+        dtype=tf.float32
+        ).sample(seed=0)
+    r2inv=tf.ones(image.shape)-r2
+
+    image=image*r2inv + r1*r2
+
+    return image,label
+
+def load_data_from_files(datapaths):
     reader = tf.TFRecordReader()
+    filename_queue = tf.train.string_input_producer(
+        datapaths,
+        shuffle=False
+        )
     _, serialized_example = reader.read(filename_queue)
     features = tf.parse_single_example(
         serialized_example,
@@ -43,17 +90,12 @@ def load_data_from_files(filename_queue):
     image = tf.decode_raw(features['image_raw'], tf.uint8)
     image.set_shape([IMAGE_PIXELS])
     image = tf.cast(image, tf.float32) * (1. / 255) - 0.5
-
     label = tf.cast(features['label'], tf.int32)
 
-    #image,label=tf.cond(
-        #tf.equal(
-            #tf.string_to_hash_bucket_strong(key,FLAGS.numproc,[0,FLAGS.seed]),
-            #FLAGS.procid
-            #),
-        #lambda: [tf.expand_dims(image,0),tf.expand_dims(label,0)],
-        #lambda: [tf.zeros([0]+image.get_shape().as_list()),tf.zeros([0],dtype=tf.int32)]
+    #label = tf.cond(
+        #tf.equal(uid%1000,0),
+        #lambda: tf.Print(label,[uid,label],message='uid,label='),
+        #lambda: label
         #)
 
     return image,label
-
